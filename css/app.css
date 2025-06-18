@@ -1149,6 +1149,78 @@ body {
 
 /* All mini word cloud items have the same size - no size classes needed */
 
+/* About Modal Styling */
+#aboutModal .modal-content {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+
+#aboutModal .modal-header {
+    background: var(--instagram-gradient);
+    color: white;
+    border: none;
+    padding: 24px 32px 20px 32px;
+}
+
+#aboutModal .modal-title {
+    font-weight: 600;
+    font-size: 1.4rem;
+}
+
+#aboutModal .btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+    font-size: 1.1rem;
+    padding: 0;
+    margin: 0;
+}
+
+#aboutModal .btn-close:hover {
+    opacity: 1;
+}
+
+#aboutModal .modal-body {
+    padding: 32px;
+    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+    line-height: 1.6;
+}
+
+#aboutModal .modal-body h6 {
+    color: #dc2743;
+    font-weight: 600;
+    margin-top: 24px;
+    margin-bottom: 12px;
+    font-size: 1rem;
+}
+
+#aboutModal .modal-body p {
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+#aboutModal .modal-body a {
+    color: #dc2743;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+#aboutModal .modal-body a:hover {
+    color: #bc1888;
+    text-decoration: underline;
+}
+
+#aboutModal .modal-body p:last-child {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+    text-align: center;
+    font-style: italic;
+    color: #6c757d;
+}
+
 .mini-word-cloud .mini-word-item .count {
     background: rgba(255, 255, 255, 0.25);
     backdrop-filter: blur(4px);
