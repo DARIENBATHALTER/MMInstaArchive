@@ -701,10 +701,11 @@ class ArchiveExplorer {
                 }
             });
 
-            // Export progress close
+            // Export progress close - cancel export
             document.addEventListener('click', (e) => {
                 if (e.target.matches('.close-progress')) {
-                    this.hideExportProgress();
+                    console.log('🛑 User clicked close - cancelling export');
+                    this.cancelExport();
                 }
             });
 
@@ -1804,7 +1805,12 @@ class ArchiveExplorer {
             
         } catch (error) {
             console.error('❌ Export failed:', error);
-            this.showError('Failed to export comments');
+            if (error.message && error.message.includes('cancelled')) {
+                // Don't show error for user-cancelled exports
+                console.log('Export cancelled by user');
+            } else {
+                this.showError('Failed to export comments');
+            }
             this.hideExportProgress();
         }
     }
@@ -1829,7 +1835,12 @@ class ArchiveExplorer {
             
         } catch (error) {
             console.error('❌ Export failed:', error);
-            this.showError('Failed to export all videos');
+            if (error.message && error.message.includes('cancelled')) {
+                // Don't show error for user-cancelled exports
+                console.log('Export cancelled by user');
+            } else {
+                this.showError('Failed to export all videos');
+            }
             this.hideExportProgress();
         }
     }
@@ -1858,6 +1869,17 @@ class ArchiveExplorer {
      */
     hideExportProgress() {
         this.elements.exportProgress.style.display = 'none';
+    }
+
+    /**
+     * Cancel the current export operation
+     */
+    cancelExport() {
+        if (this.exportService) {
+            this.exportService.cancelExport();
+        }
+        this.hideExportProgress();
+        this.showError('Export cancelled by user', 2000);
     }
 
     /**
