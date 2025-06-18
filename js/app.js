@@ -39,14 +39,91 @@ class ArchiveExplorer {
                 throw new Error('Loading screen elements not found. Please check HTML structure.');
             }
             
-            // Hide loading screen initially and show mode selection
+            // Bypass welcome screen and load archive directly
             this.elements.loadingScreen.style.display = 'none';
-            this.showModeSelection();
+            this.loadArchiveDirectly();
             
         } catch (error) {
             console.error('❌ Failed to initialize app:', error);
             this.showError('Failed to load the archive. Please refresh the page.');
         }
+    }
+
+    /**
+     * Load archive directly without welcome screen
+     */
+    async loadArchiveDirectly() {
+        try {
+            console.log('🚀 Loading archive directly...');
+            
+            // Hide the modal in case it's visible
+            this.hideModeSelection();
+            
+            // Show minimal progress wheel
+            this.showMinimalLoading();
+            
+            // Set Instagram mode (default)
+            this.modeManager.setMode('instagram');
+            this.dataManager.dataSource = 'instagram';
+            
+            // Start the app (bypass old loading screen)
+            this.bypassOldLoading = true;
+            await this.startApp();
+            
+            // Hide loading and show app
+            this.hideLoading();
+            this.elements.app.style.display = 'block';
+            
+        } catch (error) {
+            console.error('❌ Failed to load archive directly:', error);
+            this.hideLoading();
+            this.elements.app.style.display = 'block';
+            this.showError('Failed to load the archive. Please try refreshing the page.');
+        }
+    }
+
+    /**
+     * Show minimal loading indicator (just progress wheel)
+     */
+    showMinimalLoading() {
+        // Create a simple spinner if it doesn't exist
+        let spinner = document.getElementById('minimalSpinner');
+        if (!spinner) {
+            spinner = document.createElement('div');
+            spinner.id = 'minimalSpinner';
+            spinner.innerHTML = `
+                <div class="d-flex flex-column justify-content-center align-items-center" style="
+                    position: fixed; 
+                    top: 0; 
+                    left: 0; 
+                    width: 100vw; 
+                    height: 100vh; 
+                    background: rgba(255, 255, 255, 0.9); 
+                    z-index: 9999;
+                ">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3 text-muted" style="font-size: 14px;">Loading Instagram Archive</p>
+                </div>
+            `;
+            document.body.appendChild(spinner);
+        }
+        spinner.style.display = 'block';
+    }
+
+    /**
+     * Hide loading indicators
+     */
+    hideLoading() {
+        // Hide the minimal spinner
+        const spinner = document.getElementById('minimalSpinner');
+        if (spinner) {
+            spinner.style.display = 'none';
+        }
+        
+        // Ensure loading screen is hidden
+        this.elements.loadingScreen.style.display = 'none';
     }
 
     /**
@@ -222,15 +299,18 @@ class ArchiveExplorer {
      */
     async startApp() {
         try {
-            // Show loading screen
-            this.elements.loadingScreen.style.display = 'flex';
-            
-            this.updateLoadingProgress('Initializing application...', 10);
+            // Show loading screen only if not bypassing
+            if (!this.bypassOldLoading) {
+                this.elements.loadingScreen.style.display = 'flex';
+                this.updateLoadingProgress('Initializing application...', 10);
+            }
             
             // Set up event listeners
             this.setupEventListeners();
             
-            this.updateLoadingProgress('Loading video data...', 30);
+            if (!this.bypassOldLoading) {
+                this.updateLoadingProgress('Loading video data...', 30);
+            }
             
             // Initialize data manager based on current mode
             if (this.modeManager.isLocalMode() && this.modeManager.directoryManager.isDirectorySelected()) {
@@ -241,10 +321,11 @@ class ArchiveExplorer {
                 await this.dataManager.initialize();
             }
             
-            this.updateLoadingProgress('Optimizing search indexes...', 70);
-            await new Promise(resolve => setTimeout(resolve, 500)); // Brief pause for user feedback
-            
-            this.updateLoadingProgress('Setting up export services...', 90);
+            if (!this.bypassOldLoading) {
+                this.updateLoadingProgress('Optimizing search indexes...', 70);
+                await new Promise(resolve => setTimeout(resolve, 500)); // Brief pause for user feedback
+                this.updateLoadingProgress('Setting up export services...', 90);
+            }
             
             // Initialize export service
             this.exportService = new ExportService();
@@ -256,7 +337,9 @@ class ArchiveExplorer {
                 this.modeManager
             );
             
-            this.updateLoadingProgress('Ready!', 100);
+            if (!this.bypassOldLoading) {
+                this.updateLoadingProgress('Ready!', 100);
+            }
             
             // Load initial video grid
             await this.loadVideoGrid();
@@ -264,8 +347,10 @@ class ArchiveExplorer {
             // Update stats
             this.updateStats();
             
-            // Hide loading screen and show app
-            this.hideLoadingScreen();
+            // Hide loading screen and show app (only if using old loading)
+            if (!this.bypassOldLoading) {
+                this.hideLoadingScreen();
+            }
             
             // Check for enhanced ZIP capabilities
             setTimeout(() => {
@@ -451,6 +536,25 @@ class ArchiveExplorer {
             // Initialize CommentListComponent
             if (this.elements.commentsList) {
                 this.commentListComponent = new CommentListComponent(this.elements.commentsList, this.exportService);
+                // Set the export callback to handle format selection
+                this.commentListComponent.onCommentExport = (commentId, format = 'comment-only') => {
+                    console.log(`🎯 Export callback triggered: commentId=${commentId}, format=${format}`);
+                    const comment = this.findCommentById(commentId);
+                    console.log(`🔍 Found comment:`, !!comment, comment?.author);
+                    if (comment) {
+                        const video = this.currentVideo;
+                        const videoTitle = video ? video.title : '';
+                        console.log(`📹 Video title: ${videoTitle}`);
+                        console.log(`🚀 Calling exportSingleCommentWithFormat...`);
+                        try {
+                            this.exportService.exportSingleCommentWithFormat(comment, format, videoTitle);
+                        } catch (error) {
+                            console.error(`❌ Export error:`, error);
+                        }
+                    } else {
+                        console.error(`❌ Comment not found for ID: ${commentId}`);
+                    }
+                };
             }
             
             // Add back button handler for Instagram post view
@@ -514,34 +618,25 @@ class ArchiveExplorer {
                 });
             }
 
-            // Export comments
+            // Export comments with menu
             if (this.elements.exportVideoComments) {
-                this.elements.exportVideoComments.addEventListener('click', () => {
-                    this.exportVideoComments();
+                this.elements.exportVideoComments.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.showExportAllMenu(this.elements.exportVideoComments, 'single-video');
                 });
             }
             
-            // Post Analytics toggle
-            const postAnalyticsToggle = document.getElementById('postAnalyticsToggle');
-            if (postAnalyticsToggle) {
-                console.log('✅ Post analytics toggle found and event listener added');
-                postAnalyticsToggle.addEventListener('click', (e) => {
-                    console.log('🔥 Post analytics toggle clicked!');
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.toggleAnalyticsPanel();
-                });
-            } else {
-                console.error('❌ Post analytics toggle not found in DOM during setup');
-            }
+            // Post Analytics toggle is set up in setupAnalyticsToggle() method
+            this.setupAnalyticsToggle();
             
             // Analytics tab switching
             this.setupAnalyticsTabs();
 
-            // Export all videos
+            // Export all videos with menu
             if (this.elements.exportAllVideos) {
-                this.elements.exportAllVideos.addEventListener('click', () => {
-                    this.exportAllVideosComments();
+                this.elements.exportAllVideos.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.showExportAllMenu(this.elements.exportAllVideos, 'all-videos');
                 });
             }
 
@@ -561,26 +656,8 @@ class ArchiveExplorer {
                 });
             }
 
-            // Export single comment button (event delegation)
-            document.addEventListener('click', (e) => {
-                if (e.target.matches('.export-btn') || e.target.closest('.export-btn')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    const btn = e.target.closest('.export-btn');
-                    const commentId = btn?.dataset?.commentId;
-                    
-                    if (commentId) {
-                        const comment = this.findCommentById(commentId);
-                        if (comment) {
-                            this.exportSingleComment(comment);
-                        } else {
-                            console.error('Comment not found:', commentId);
-                            this.showError('Comment not found');
-                        }
-                    }
-                }
-            });
+            // Export single comment button is now handled by CommentListComponent
+            // This handler has been moved to prevent conflicts with the export menu
 
             // Insights tab switching
             document.addEventListener('click', (e) => {
@@ -911,8 +988,6 @@ class ArchiveExplorer {
             // Show panel and load analytics
             console.log('🔼 Showing analytics panel');
             panel.style.display = 'block';
-            panel.style.backgroundColor = '#ffcccc'; // Temporary debug color
-            panel.style.minHeight = '200px'; // Ensure it has height
             toggle.setAttribute('data-expanded', 'true');
             if (icon) icon.classList.add('rotated');
             
@@ -1035,9 +1110,17 @@ class ArchiveExplorer {
             return;
         }
         
-        const html = likedWords.slice(0, 12).map(({ word, avgLikes, count }) => {
-            return `<span class="analytics-liked-item" title="Average ${Math.round(avgLikes)} likes in ${count} comments">
-                ${word} <span style="opacity: 0.8;">${Math.round(avgLikes)}</span>
+        const html = likedWords.slice(0, 12).map(({ word, avgLikes, count }, index) => {
+            // Determine size based on position (like word cloud)
+            let sizeClass = 'size-3'; // default
+            if (index === 0) sizeClass = 'size-5';
+            else if (index === 1) sizeClass = 'size-4';
+            else if (index < 4) sizeClass = 'size-3';
+            else if (index < 8) sizeClass = 'size-2';
+            else sizeClass = 'size-1';
+            
+            return `<span class="analytics-word-item ${sizeClass}" title="Average ${Math.round(avgLikes)} likes in ${count} comments">
+                ${word}<span class="word-count">${Math.round(avgLikes)}</span>
             </span>`;
         }).join('');
         
@@ -1215,7 +1298,7 @@ class ArchiveExplorer {
             const date = new Date(video.published_at);
             const now = new Date();
             const diffTime = Math.abs(now - date);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             
             let timeText;
             if (diffDays < 1) {
@@ -1310,6 +1393,13 @@ class ArchiveExplorer {
             console.log(`Loaded ${allComments.length} comments for ${this.currentVideo.video_id}`);
             
             this.renderComments(allComments);
+            
+            // Update comments title with total count
+            const commentsTitle = document.getElementById('commentsTitle');
+            if (commentsTitle) {
+                const totalCount = allComments.length;
+                commentsTitle.textContent = `Comments (${totalCount})`;
+            }
             
             // Hide load more button since we're loading all comments
             if (this.elements.loadMoreComments) {
@@ -1457,7 +1547,7 @@ class ArchiveExplorer {
     /**
      * Export all video comments
      */
-    async exportVideoComments() {
+    async exportVideoComments(format = 'comment-only') {
         if (!this.currentVideo) return;
         
         try {
@@ -1468,7 +1558,8 @@ class ArchiveExplorer {
                 this.dataManager,
                 (progress) => {
                     this.updateExportProgress(progress, 'single');
-                }
+                },
+                format
             );
             
             // Close overlay after successful export
@@ -1484,7 +1575,7 @@ class ArchiveExplorer {
     /**
      * Export comments for all videos
      */
-    async exportAllVideosComments() {
+    async exportAllVideosComments(format = 'comment-only') {
         try {
             this.showExportProgress('all');
             
@@ -1492,7 +1583,8 @@ class ArchiveExplorer {
                 this.dataManager,
                 (progress) => {
                     this.updateExportProgress(progress, 'all');
-                }
+                },
+                format
             );
             
             // Close overlay after successful export
@@ -1729,6 +1821,89 @@ class ArchiveExplorer {
     }
 
     /**
+     * Show export format menu for bulk export buttons
+     */
+    showExportAllMenu(button, exportType) {
+        // Hide any existing menu
+        this.hideExportAllMenu();
+
+        // Create menu
+        const menu = document.createElement('div');
+        menu.className = 'export-menu';
+        menu.innerHTML = `
+            <div class="export-menu-option" data-format="comment-only" data-export-type="${exportType}">
+                <span>Export comment only</span>
+            </div>
+            <div class="export-menu-option" data-format="iphone-dark" data-export-type="${exportType}">
+                <span>Export iPhone dark</span>
+            </div>
+            <div class="export-menu-option" data-format="iphone-light" data-export-type="${exportType}">
+                <span>Export iPhone light</span>
+            </div>
+        `;
+
+        // Position menu relative to button
+        const buttonRect = button.getBoundingClientRect();
+        menu.style.position = 'fixed';
+        menu.style.top = (buttonRect.bottom + 5) + 'px';
+        menu.style.left = (buttonRect.left - 50) + 'px';
+        menu.style.zIndex = '1000';
+
+        // Add menu to body
+        document.body.appendChild(menu);
+
+        // Add click handlers for menu options
+        menu.addEventListener('click', (e) => {
+            const option = e.target.closest('.export-menu-option');
+            if (option) {
+                const format = option.dataset.format;
+                const exportType = option.dataset.exportType;
+                this.handleExportAllFormat(exportType, format);
+                this.hideExportAllMenu();
+            }
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', this.handleExportMenuClickOutside);
+    }
+
+    /**
+     * Hide export all menu
+     */
+    hideExportAllMenu() {
+        const existingMenu = document.querySelector('.export-menu');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
+        document.removeEventListener('click', this.handleExportMenuClickOutside);
+    }
+
+    /**
+     * Handle clicking outside export menu
+     */
+    handleExportMenuClickOutside = (e) => {
+        if (!e.target.closest('.export-menu') && !e.target.closest('button[id*="export"]')) {
+            this.hideExportAllMenu();
+        }
+    }
+
+    /**
+     * Handle export format selection for bulk exports
+     */
+    handleExportAllFormat(exportType, format) {
+        console.log(`Bulk export type: ${exportType}, format: ${format}`);
+        
+        // Store the selected format for use in the export process
+        this.bulkExportFormat = format;
+        
+        if (exportType === 'single-video') {
+            this.exportVideoComments(format);
+        } else if (exportType === 'all-videos') {
+            this.exportAllVideosComments(format);
+        }
+    }
+
+    /**
      * Show success message
      */
     showSuccess(message, duration = 3000) {
@@ -1791,7 +1966,7 @@ class ArchiveExplorer {
                 // Use pre-computed data for instant loading
                 this.renderWordCloud(preComputed.word_cloud);
                 this.renderLikedWords(preComputed.liked_words);
-                this.renderMiniWordCloud(preComputed.word_cloud.slice(0, 5)); // Show top 5 words in mini cloud
+                this.renderMiniWordCloud(preComputed.word_cloud.slice(0, 7)); // Show top 7 words in mini cloud
                 this.elements.commentInsights.style.display = 'block';
                 return;
             }
@@ -1812,7 +1987,7 @@ class ArchiveExplorer {
             // Update UI
             this.renderWordCloud(wordFreq);
             this.renderLikedWords(likedWords);
-            this.renderMiniWordCloud(wordFreq.slice(0, 5)); // Show top 5 words in mini cloud
+            this.renderMiniWordCloud(wordFreq.slice(0, 7)); // Show top 7 words in mini cloud
             this.elements.commentInsights.style.display = 'block';
 
         } catch (error) {
@@ -1956,16 +2131,33 @@ class ArchiveExplorer {
         const minCount = Math.min(...wordFreq.map(w => w.count));
         
         const html = wordFreq.map(({ word, count }) => {
-            // Calculate relative size (1-4 scale)
-            const relativeSize = minCount === maxCount ? 2 : 
-                Math.round(1 + (count - minCount) / (maxCount - minCount) * 3);
+            // Truncate long words to prevent overflow
+            const displayWord = word.length > 12 ? word.substring(0, 12) + '...' : word;
+            const title = word.length > 12 ? `"${word}" - ${count} mentions` : `${count} mentions`;
             
-            return `<span class="mini-word-item size-${relativeSize}" title="${count} mentions">
-                ${word} <span class="count">${count}</span>
+            return `<span class="mini-word-item" title="${title}" data-word="${word}" style="cursor: pointer;">
+                ${this.escapeHTML(displayWord)} <span class="count">${count}</span>
             </span>`;
         }).join('');
 
         miniWordCloudElement.innerHTML = html;
+        
+        // Add click handlers to word items
+        miniWordCloudElement.querySelectorAll('.mini-word-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const word = e.target.closest('.mini-word-item').dataset.word;
+                if (word) {
+                    // Set the search term in the comment search box
+                    const searchInput = document.getElementById('commentSearch');
+                    if (searchInput) {
+                        searchInput.value = word;
+                        // Trigger the search
+                        const event = new Event('input', { bubbles: true });
+                        searchInput.dispatchEvent(event);
+                    }
+                }
+            });
+        });
     }
 
     /**

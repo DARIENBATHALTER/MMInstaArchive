@@ -114,13 +114,13 @@ class VideoGridComponent {
         if (diffDays < 1) {
             dateText = 'Today';
         } else if (diffDays < 7) {
-            dateText = `${diffDays}d ago`;
+            dateText = `${diffDays}d`;
         } else if (diffDays < 30) {
-            dateText = `${Math.floor(diffDays / 7)}w ago`;
+            dateText = `${Math.floor(diffDays / 7)}w`;
         } else if (diffDays < 365) {
-            dateText = `${Math.floor(diffDays / 30)}mo ago`;
+            dateText = `${Math.floor(diffDays / 30)}mo`;
         } else {
-            dateText = `${Math.floor(diffDays / 365)}y ago`;
+            dateText = `${Math.floor(diffDays / 365)}y`;
         }
         
         return `
@@ -143,21 +143,22 @@ class VideoGridComponent {
                     <!-- Hover overlay with stats -->
                     <div class="hover-overlay position-absolute w-100 h-100 d-flex align-items-center justify-content-center">
                         <div class="text-white text-center">
-                            <div class="mb-2">
-                                <i class="${mediaType === 'video' ? 'fas fa-play' : 'fas fa-eye'} me-1"></i>
-                                <span>${mediaType === 'video' ? 'Video' : 'Photo'}</span>
+                            <div class="mb-3">
+                                <i class="${mediaType === 'video' ? 'fas fa-play' : 'fas fa-eye'}" style="font-size: 28px;"></i>
                             </div>
                             <div class="mb-2">
                                 <i class="fas fa-calendar-alt me-1"></i>
                                 <span>${dateText}</span>
                             </div>
-                            <div class="mb-1">
-                                <i class="fas fa-heart me-1"></i>
-                                <span>${likes}</span>
-                            </div>
-                            <div>
-                                <i class="fas fa-comment me-1"></i>
-                                <span>${comments}</span>
+                            <div class="d-flex align-items-center justify-content-center gap-3">
+                                <div>
+                                    <i class="fas fa-heart me-1"></i>
+                                    <span>${likes}</span>
+                                </div>
+                                <div>
+                                    <i class="fas fa-comment me-1"></i>
+                                    <span>${comments}</span>
+                                </div>
                             </div>
                         </div>
                     </div>

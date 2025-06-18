@@ -21,7 +21,14 @@ class CommentListComponent {
                 e.preventDefault();
                 const btn = e.target.closest('.export-btn');
                 const commentId = btn.dataset.commentId;
-                this.onCommentExport?.(commentId);
+                this.showExportMenu(btn, commentId);
+            }
+        });
+
+        // Close export menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.export-menu') && !e.target.closest('.export-btn')) {
+                this.hideExportMenu();
             }
         });
 
@@ -90,80 +97,87 @@ class CommentListComponent {
     createSingleComment(comment, isReply = false) {
         const avatarColor = this.generateAvatarColor(comment.author);
         const firstLetter = comment.author[1]?.toUpperCase() || comment.author[0]?.toUpperCase() || 'U';
-        const date = new Date(comment.published_at || comment.commentAt).toLocaleDateString();
-        const likes = this.formatNumber(comment.like_count || comment.reactionsCount);
+        
+        // Format date to show time ago (e.g., "2d", "1w", "3mo")
+        const formatTimeAgo = (dateStr) => {
+            const date = dateStr instanceof Date ? dateStr : new Date(dateStr);
+            
+            // Check if date is valid
+            if (isNaN(date.getTime())) {
+                console.warn('Invalid date:', dateStr);
+                return '1d'; // Default fallback
+            }
+            
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSecs = Math.floor(diffMs / 1000);
+            const diffMins = Math.floor(diffSecs / 60);
+            const diffHours = Math.floor(diffMins / 60);
+            const diffDays = Math.floor(diffHours / 24);
+            const diffWeeks = Math.floor(diffDays / 7);
+            const diffMonths = Math.floor(diffDays / 30);
+            const diffYears = Math.floor(diffDays / 365);
+            
+            if (diffYears > 0) return diffYears + 'y';
+            if (diffMonths > 0) return diffMonths + 'mo';
+            if (diffWeeks > 0) return diffWeeks + 'w';
+            if (diffDays > 0) return diffDays + 'd';
+            if (diffHours > 0) return diffHours + 'h';
+            if (diffMins > 0) return diffMins + 'm';
+            if (diffSecs > 0) return 'just now';
+            return '1d'; // For any future dates or edge cases
+        };
+        
+        const timeAgo = formatTimeAgo(comment.published_at || comment.commentAt);
+        const likes = comment.like_count || comment.reactionsCount || 0;
+        const likesText = likes > 0 ? `${this.formatNumber(likes)} ${likes === 1 ? 'like' : 'likes'}` : '';
         const heartIcon = comment.channel_owner_liked ? '❤️' : '';
         
         const cardClass = isReply ? 'reply-card comment-card' : 'comment-card';
-        const avatarSize = isReply ? '28' : '32';
-        const avatarFontSize = isReply ? '0.8rem' : '1rem';
+        const marginLeft = isReply ? 'margin-left: 44px;' : '';
         
         // Use local avatar for medicalmedium, Instagram profile picture for others, otherwise fallback to colored initial
         const avatarUrl = comment.author === 'medicalmedium' ? 'MMCommentExplorer.webp' : comment.avatar;
         const avatarElement = avatarUrl ? `
             <img src="${avatarUrl}" 
                  alt="${this.escapeHTML(comment.author)}" 
-                 style="
-                     width: ${avatarSize}px; 
-                     height: ${avatarSize}px; 
-                     border-radius: 50%; 
-                     object-fit: cover;
-                     border: 1px solid #ddd;
-                 "
+                 class="comment-avatar-img"
                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-            <div style="
+            <div class="comment-avatar-initial" style="
                 background-color: ${avatarColor}; 
-                width: ${avatarSize}px; 
-                height: ${avatarSize}px; 
-                border-radius: 50%; 
-                display: none; 
-                align-items: center; 
-                justify-content: center; 
-                color: white; 
-                font-weight: 500;
-                font-size: ${avatarFontSize};
+                display: none;
             ">
                 ${firstLetter}
             </div>
         ` : `
-            <div style="
+            <div class="comment-avatar-initial" style="
                 background-color: ${avatarColor}; 
-                width: ${avatarSize}px; 
-                height: ${avatarSize}px; 
-                border-radius: 50%; 
-                display: flex; 
-                align-items: center; 
-                justify-content: center; 
-                color: white; 
-                font-weight: 500;
-                font-size: ${avatarFontSize};
+                display: flex;
             ">
                 ${firstLetter}
             </div>
         `;
         
         return `
-            <div class="${cardClass}">
+            <div class="${cardClass}" style="${marginLeft}">
                 <div class="profile-avatar">
                     ${avatarElement}
                 </div>
                 <div class="comment-content">
-                    <div class="comment-header">
+                    <div class="comment-text">
                         <span class="comment-author">${this.escapeHTML(comment.author)}</span>
-                        <span class="comment-text">${this.highlightText(this.escapeHTML(comment.text || comment.content))}</span>
+                        ${this.highlightText(this.escapeHTML(comment.text || comment.content))}
                     </div>
                     <div class="comment-actions">
-                        <span class="comment-date">${date}</span>
-                        <span class="comment-likes">${likes} likes</span>
-                        <span class="comment-reply">Reply</span>
+                        <span class="comment-date">${timeAgo}</span>
+                        ${likesText ? `<span class="comment-likes">${likesText}</span>` : ''}
                         ${heartIcon ? `<span class="channel-owner-liked">${heartIcon}</span>` : ''}
                     </div>
                 </div>
-                <div class="comment-export" style="position: absolute; top: 12px; right: 16px; opacity: 0; transition: opacity 0.2s;">
-                    <button class="btn btn-outline-primary btn-sm export-btn" 
+                <div class="comment-export">
+                    <button class="export-btn" 
                             data-comment-id="${comment.comment_id}"
-                            title="Export this comment as PNG"
-                            style="font-size: 10px; padding: 2px 6px;">
+                            title="Export this comment as PNG">
                         <i class="bi bi-download"></i>
                     </button>
                 </div>
@@ -204,16 +218,16 @@ class CommentListComponent {
             btn.title = 'Export this comment as PNG';
         });
 
-        // Add click animations
-        this.container.querySelectorAll('.comment-card').forEach(card => {
-            card.addEventListener('mouseenter', () => {
-                card.style.transform = 'translateY(-1px)';
-            });
-            
-            card.addEventListener('mouseleave', () => {
-                card.style.transform = 'translateY(0)';
-            });
-        });
+        // Remove problematic hover animations that interfere with export buttons
+        // this.container.querySelectorAll('.comment-card').forEach(card => {
+        //     card.addEventListener('mouseenter', () => {
+        //         card.style.transform = 'translateY(-1px)';
+        //     });
+        //     
+        //     card.addEventListener('mouseleave', () => {
+        //         card.style.transform = 'translateY(0)';
+        //     });
+        // });
     }
 
     /**
@@ -329,6 +343,69 @@ class CommentListComponent {
                 <p class="mt-3">${message}</p>
             </div>
         `;
+    }
+
+    /**
+     * Show export format menu
+     */
+    showExportMenu(button, commentId) {
+        // Hide any existing menu
+        this.hideExportMenu();
+
+        // Create menu
+        const menu = document.createElement('div');
+        menu.className = 'export-menu';
+        menu.innerHTML = `
+            <div class="export-menu-option" data-format="comment-only" data-comment-id="${commentId}">
+                <span>Export comment only</span>
+            </div>
+            <div class="export-menu-option" data-format="iphone-dark" data-comment-id="${commentId}">
+                <span>Export iPhone dark</span>
+            </div>
+            <div class="export-menu-option" data-format="iphone-light" data-comment-id="${commentId}">
+                <span>Export iPhone light</span>
+            </div>
+        `;
+
+        // Position menu relative to button
+        const buttonRect = button.getBoundingClientRect();
+        menu.style.position = 'fixed';
+        menu.style.top = (buttonRect.bottom + 5) + 'px';
+        menu.style.left = (buttonRect.left - 100) + 'px'; // Offset to the left
+        menu.style.zIndex = '1000';
+
+        // Add menu to body
+        document.body.appendChild(menu);
+
+        // Add click handlers for menu options
+        menu.addEventListener('click', (e) => {
+            const option = e.target.closest('.export-menu-option');
+            if (option) {
+                const format = option.dataset.format;
+                const commentId = option.dataset.commentId;
+                this.handleExportFormat(commentId, format);
+                this.hideExportMenu();
+            }
+        });
+    }
+
+    /**
+     * Hide export menu
+     */
+    hideExportMenu() {
+        const existingMenu = document.querySelector('.export-menu');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
+    }
+
+    /**
+     * Handle export format selection
+     */
+    handleExportFormat(commentId, format) {
+        console.log(`🔄 handleExportFormat called: commentId=${commentId}, format=${format}`);
+        console.log(`🔗 onCommentExport callback exists:`, !!this.onCommentExport);
+        this.onCommentExport?.(commentId, format);
     }
 }
 

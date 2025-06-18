@@ -39,6 +39,7 @@
     <header class="navbar navbar-expand-lg sticky-top">
         <div class="container-fluid">
             <div class="d-flex align-items-center">
+                <div class="d-none d-lg-block" style="width: 70px;"></div>
                 <a href="#" id="home-link" class="navbar-brand d-flex align-items-center text-decoration-none" style="cursor: pointer;">
                     <i class="fab fa-instagram text-gradient me-2" style="background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent;"></i>
                     <span>MM Instagram Archive Explorer</span>
@@ -302,14 +303,6 @@
                             </div>
                             
                             <!-- Post Navigation Arrows -->
-                            <div class="post-navigation">
-                                <button class="post-nav-btn prev-post" id="prevPostBtn" title="Previous post">
-                                    <i class="fas fa-chevron-left"></i>
-                                </button>
-                                <button class="post-nav-btn next-post" id="nextPostBtn" title="Next post">
-                                    <i class="fas fa-chevron-right"></i>
-                                </button>
-                            </div>
                         </div>
                         
                     </div>
@@ -319,13 +312,6 @@
                         <div class="instagram-comments-sidebar">
                             <!-- Single Scrollable Container for all content -->
                             <div class="comments-scroll-container">
-                                
-                                <!-- Limited Word Cloud -->
-                                <div class="p-3 border-bottom">
-                                    <div class="mini-word-cloud mb-3" id="miniWordCloud">
-                                        <!-- Mini word cloud will be populated here -->
-                                    </div>
-                                </div>
                                 
                                 <!-- Post Analytics Toggle -->
                                 <div class="p-3 border-bottom">
@@ -415,7 +401,7 @@
                                 <div class="comments-content p-3">
                                     <!-- Comments Header -->
                                     <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <h5>Comments</h5>
+                                        <h5 id="commentsTitle">Comments</h5>
                                         <button type="button" id="exportVideoComments" class="btn btn-outline-primary btn-sm">
                                             <i class="bi bi-download"></i> Export All
                                         </button>
@@ -433,6 +419,14 @@
                                                 <option value="likes-asc">Least Liked</option>
                                                 <option value="likes-asc">Oldest</option>
                                             </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Popular Words -->
+                                    <div class="mb-3">
+                                        <h6 class="mb-2" style="font-size: 14px; color: #8e8e8e; font-weight: 600;">Popular</h6>
+                                        <div class="mini-word-cloud" id="miniWordCloud">
+                                            <!-- Mini word cloud will be populated here -->
                                         </div>
                                     </div>
                                     
@@ -543,19 +537,20 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="aboutModalLabel">About</h5>
+                    <h5 class="modal-title" id="aboutModalLabel">Instagram Archive Explorer</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <h6>YouTube Comment Explorer</h6>
+                    <h6>Instagram Archive Explorer</h6>
                     <p class="mb-1">© 2025 Darien Bathalter</p>
-                    <p class="mb-3">For bespoke data visualization tools...</p>
+                    <p class="mb-1">For bespoke data visualization tools...</p>
+                    <p class="mb-3"><a href="https://quiettools.dev/" target="_blank">https://quiettools.dev/</a></p>
                     
                     <h6>Contact information:</h6>
-                    <p class="mb-1">Email: <a href="mailto:me@darienbathalter.com">me@darienbathalter.com</a></p>
+                    <p class="mb-1">Email: <a href="mailto:hello@quiettools.dev">hello@quiettools.dev</a></p>
                     <p class="mb-3">Text / Voicemail: <a href="tel:+19045726183">(904) 572-6183</a></p>
                     
-                    <p class="mb-0"><em>Created with Ode</em></p>
+                    <p class="mb-0"><em>Made with Ode 🫒</em></p>
                 </div>
             </div>
         </div>

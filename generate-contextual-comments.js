@@ -92,20 +92,80 @@ function analyzeCaption(caption) {
     const lowerCaption = caption.toLowerCase();
     const contextualTemplates = [];
     
-    // Check for call-to-action patterns
-    if (lowerCaption.includes('comment') && (lowerCaption.includes('recipe') || lowerCaption.includes('link') || lowerCaption.includes('dm'))) {
-        const keyword = extractCommentKeyword(caption);
-        if (keyword) {
-            contextualTemplates.push(
-                keyword.toUpperCase(),
-                `${keyword} please!`,
-                `${keyword} 🙏`,
-                `Can you send me the ${keyword.toLowerCase()}?`,
-                `${keyword} please! I need this in my life`,
-                `${keyword} - thank you so much! 💚`,
-                `${keyword}! This looks amazing`
-            );
+    // Check for call-to-action patterns - much more extensive detection
+    const callToActionPatterns = [
+        /comment[\s"']+([A-Z][A-Z\s]*?)[\s"']+(?:and|to|for|we|will|link|dm|send|get)/i,
+        /comment[\s"']+([A-Z][A-Z\s]*?)[\s"']/i,
+        /comment[\s"']+([A-Z]+)[\s"']/i,
+        /comment\s+"([^"]+)"/i,
+        /comment\s+([A-Z]+)\s/i
+    ];
+    
+    let foundKeyword = null;
+    for (const pattern of callToActionPatterns) {
+        const match = caption.match(pattern);
+        if (match && match[1]) {
+            foundKeyword = match[1].trim();
+            // Clean up the keyword
+            foundKeyword = foundKeyword.replace(/\s+(and|to|for|we|will|link|dm|you|get|send|now|the|a|an).*$/i, '');
+            const wordCount = foundKeyword.split(/\s+/).length;
+            if (wordCount <= 3 && foundKeyword.length > 0) {
+                break;
+            }
+            foundKeyword = null;
         }
+    }
+    
+    if (foundKeyword) {
+        // Add MANY call-to-action response templates
+        const keyword = foundKeyword;
+        contextualTemplates.push(
+            // Direct keyword responses (most common)
+            keyword.toUpperCase(),
+            keyword.toUpperCase(),
+            keyword.toUpperCase(),
+            keyword.toUpperCase(),
+            keyword.toUpperCase(),
+            
+            // Variations with please
+            `${keyword} please!`,
+            `${keyword} please!`,
+            `${keyword} please 🙏`,
+            `${keyword} please 💚`,
+            
+            // Enthusiastic versions
+            `${keyword}! 🙌`,
+            `${keyword}!! 💚`,
+            `${keyword} 😍`,
+            `${keyword} ❤️`,
+            
+            // Polite requests
+            `Can you send me the ${keyword.toLowerCase()}?`,
+            `${keyword} please! I need this in my life`,
+            `${keyword} - thank you so much! 💚`,
+            `${keyword}! This looks amazing`,
+            `Would love the ${keyword.toLowerCase()}!`,
+            `${keyword} please! Can't wait to try this`,
+            
+            // Grateful versions
+            `${keyword} thank you! 🙏`,
+            `${keyword} - you're amazing! ✨`,
+            `${keyword} please! So grateful 💚`,
+            
+            // Urgent/excited versions
+            `${keyword}!! I need this now!`,
+            `${keyword} ASAP please! 🙏`,
+            `${keyword}! My family needs this`,
+            
+            // Simple with emojis
+            `${keyword} 🙏💚`,
+            `${keyword} ✨`,
+            `${keyword} 🌟`,
+            `${keyword} 💫`
+        );
+        
+        // Mark this as having a call-to-action for weighted selection
+        contextualTemplates._hasCallToAction = true;
     }
     
     // Recipe-specific responses
@@ -303,10 +363,19 @@ function generateContextualComment(postDate, index, caption) {
     // Get contextual templates based on caption
     const contextualTemplates = analyzeCaption(caption);
     
-    // Combine contextual and base templates with higher weight for contextual
-    const allTemplates = [...contextualTemplates, ...contextualTemplates, ...baseCommentTemplates];
+    let template;
     
-    const template = allTemplates[Math.floor(Math.random() * allTemplates.length)];
+    // If this post has a call-to-action, heavily weight those responses
+    if (contextualTemplates._hasCallToAction && Math.random() < 0.7) {
+        // 70% chance to use call-to-action responses
+        const callToActionTemplates = contextualTemplates.filter(t => typeof t === 'string');
+        template = callToActionTemplates[Math.floor(Math.random() * callToActionTemplates.length)];
+    } else {
+        // Use mix of contextual and base templates
+        const allTemplates = [...contextualTemplates, ...contextualTemplates, ...baseCommentTemplates];
+        template = allTemplates[Math.floor(Math.random() * allTemplates.length)];
+    }
+    
     const content = fillTemplate(template);
     
     // Generate realistic timestamp after post date
