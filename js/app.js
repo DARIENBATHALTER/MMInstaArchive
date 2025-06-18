@@ -682,6 +682,23 @@ class ArchiveExplorer {
                 }
             });
 
+            // List view post clicks (delegated event listener)
+            document.addEventListener('click', (e) => {
+                const listRow = e.target.closest('#videoListTable tbody tr[data-video-id]');
+                if (listRow) {
+                    // Only handle clicks on thumbnail or title, not export button
+                    if (e.target.classList.contains('post-thumbnail') || 
+                        e.target.classList.contains('post-title') ||
+                        e.target.closest('.post-thumbnail') ||
+                        e.target.closest('.post-title')) {
+                        const videoId = listRow.dataset.videoId;
+                        if (videoId) {
+                            this.showVideoDetail(videoId);
+                        }
+                    }
+                }
+            });
+
             // Export progress close
             document.addEventListener('click', (e) => {
                 if (e.target.matches('.close-progress')) {
@@ -837,13 +854,7 @@ class ArchiveExplorer {
         const html = videos.map(video => this.createVideoListRow(video)).join('');
         this.elements.videoListBody.innerHTML = html;
         
-        // Add click handlers for thumbnails and titles
-        this.elements.videoListBody.addEventListener('click', (e) => {
-            const videoId = e.target.closest('[data-video-id]')?.dataset.videoId;
-            if (videoId && (e.target.classList.contains('post-thumbnail') || e.target.classList.contains('post-title'))) {
-                this.showVideoDetail(videoId);
-            }
-        });
+        // Note: Click handlers are set up via event delegation in setupEventListeners
     }
 
     /**
@@ -1095,8 +1106,9 @@ class ArchiveExplorer {
             // Scroll to top when showing video detail
             window.scrollTo({ top: 0, behavior: 'smooth' });
             
-            // Update UI
+            // Update UI - hide both grid and list views
             this.elements.videoGridView.style.display = 'none';
+            this.elements.videoListView.style.display = 'none';
             this.elements.videoDetailView.style.display = 'block';
             
             // Add single post mode class to remove app padding
@@ -1483,7 +1495,15 @@ class ArchiveExplorer {
         this.currentVideo = null;
         
         this.elements.videoDetailView.style.display = 'none';
-        this.elements.videoGridView.style.display = 'block';
+        
+        // Restore the correct view mode (grid or list)
+        if (this.currentViewMode === 'grid') {
+            this.elements.videoGridView.style.display = 'block';
+            this.elements.videoListView.style.display = 'none';
+        } else {
+            this.elements.videoGridView.style.display = 'none';
+            this.elements.videoListView.style.display = 'block';
+        }
         
         // Remove single post mode class to restore app padding
         document.getElementById('app').classList.remove('single-post-mode');
