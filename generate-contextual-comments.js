@@ -365,9 +365,9 @@ function generateContextualComment(postDate, index, caption) {
     
     let template;
     
-    // If this post has a call-to-action, heavily weight those responses
-    if (contextualTemplates._hasCallToAction && Math.random() < 0.7) {
-        // 70% chance to use call-to-action responses
+    // If this post has a call-to-action, moderately weight those responses
+    if (contextualTemplates._hasCallToAction && Math.random() < 0.45) {
+        // 45% chance to use call-to-action responses
         const callToActionTemplates = contextualTemplates.filter(t => typeof t === 'string');
         template = callToActionTemplates[Math.floor(Math.random() * callToActionTemplates.length)];
     } else {
@@ -493,24 +493,52 @@ async function generateCommentsForAllPosts() {
         fs.writeFileSync('/Users/darien/Desktop/MMInstaArchive/MMArchiveExplorer/data/instagram-comments.json', JSON.stringify(existingComments, null, 2));
         console.log('✅ Generated contextual comments saved to data/instagram-comments.json');
         
-        // Also update the posts data with captions
-        const postsWithCaptions = posts.map((post, index) => ({
-            video_id: `post_${index + 1}`,
-            title: post.caption.substring(0, 100) + '...',
-            description: post.caption,
-            caption: post.caption,
-            published_at: post.createDate,
-            like_count: post.likes,
-            comment_count: post.comments,
-            view_count: post.likes * 3, // Estimate views
-            media_files: [{
-                filename: `post_${index + 1}.jpg`,
-                type: 'image'
-            }]
-        }));
+        // Read existing posts and media mapping to preserve correct media file references
+        let existingPosts = [];
+        let mediaMapping = {};
+        
+        try {
+            const existingPostsData = fs.readFileSync('/Users/darien/Desktop/MMInstaArchive/MMArchiveExplorer/data/instagram-posts.json', 'utf8');
+            existingPosts = JSON.parse(existingPostsData);
+            
+            const mediaMappingData = fs.readFileSync('/Users/darien/Desktop/MMInstaArchive/MMArchiveExplorer/data/instagram-media-mapping.json', 'utf8');
+            mediaMapping = JSON.parse(mediaMappingData);
+        } catch (error) {
+            console.log('Could not read existing posts or media mapping, creating new structure');
+        }
+        
+        // Update posts with captions while preserving existing media file references
+        const postsWithCaptions = posts.map((post, index) => {
+            const postId = `post_${index + 1}`;
+            const existingPost = existingPosts.find(p => p.video_id === postId);
+            
+            // Use existing media files if available, otherwise try to find in mapping
+            let mediaFiles = [{ filename: `post_${index + 1}.jpg`, type: 'image' }]; // fallback
+            
+            if (existingPost && existingPost.media_files) {
+                mediaFiles = existingPost.media_files;
+            } else if (mediaMapping[postId]) {
+                mediaFiles = mediaMapping[postId].map(media => ({
+                    filename: media.filename,
+                    type: media.type
+                }));
+            }
+            
+            return {
+                video_id: postId,
+                title: post.caption.substring(0, 100) + '...',
+                description: post.caption,
+                caption: post.caption,
+                published_at: post.createDate,
+                like_count: post.likes,
+                comment_count: post.comments,
+                view_count: post.likes * 3, // Estimate views
+                media_files: mediaFiles
+            };
+        });
         
         fs.writeFileSync('/Users/darien/Desktop/MMInstaArchive/MMArchiveExplorer/data/instagram-posts.json', JSON.stringify(postsWithCaptions, null, 2));
-        console.log('✅ Updated posts data with captions');
+        console.log('✅ Updated posts data with captions while preserving media file references');
         
     } catch (error) {
         console.error('❌ Error generating contextual comments:', error);
