@@ -486,7 +486,7 @@ class ArchiveExplorer {
             commentSearch: 'commentSearch',
             commentSort: 'commentSort',
             loadMoreComments: 'loadMoreComments',
-            exportVideoComments: 'exportVideoComments',
+            exportSinglePostComments: 'exportSinglePostComments',
             exportProgress: 'exportProgress',
             exportProgressBar: 'exportProgressBar',
             exportProgressText: 'exportProgressText',
@@ -496,7 +496,7 @@ class ArchiveExplorer {
             currentVideoStats: 'currentVideoStats',
             overallProgressLabel: 'overallProgressLabel',
             overallProgressStats: 'overallProgressStats',
-            exportAllVideos: 'exportAllVideos',
+            exportAllPostsComments: 'exportAllPostsComments',
             commentInsights: 'commentInsights',
             wordCloud: 'wordCloud',
             likedWords: 'likedWords',
@@ -519,9 +519,6 @@ class ArchiveExplorer {
             const element = document.getElementById(id);
             if (element) {
                 this.elements[key] = element;
-                if (key === 'exportVideoComments' || key === 'exportAllVideos') {
-                    console.log(`✅ Export button found: ${id}`, element);
-                }
             } else {
                 console.warn(`⚠️ Optional element not found: ${id}`);
                 this.elements[key] = null;
@@ -646,12 +643,11 @@ class ArchiveExplorer {
                 });
             }
 
-            // Export comments with menu
-            if (this.elements.exportVideoComments) {
-                this.elements.exportVideoComments.addEventListener('click', (e) => {
+            // Export single post comments with menu
+            if (this.elements.exportSinglePostComments) {
+                this.elements.exportSinglePostComments.addEventListener('click', (e) => {
                     e.preventDefault();
-                    console.log('Export video comments button clicked');
-                    this.showExportAllMenu(this.elements.exportVideoComments, 'single-video');
+                    this.showExportAllMenu(this.elements.exportSinglePostComments, 'single-video');
                 });
             }
             
@@ -661,12 +657,11 @@ class ArchiveExplorer {
             // Analytics tab switching
             this.setupAnalyticsTabs();
 
-            // Export all videos with menu
-            if (this.elements.exportAllVideos) {
-                this.elements.exportAllVideos.addEventListener('click', (e) => {
+            // Export all posts comments with menu
+            if (this.elements.exportAllPostsComments) {
+                this.elements.exportAllPostsComments.addEventListener('click', (e) => {
                     e.preventDefault();
-                    console.log('Export all videos button clicked');
-                    this.showExportAllMenu(this.elements.exportAllVideos, 'all-videos');
+                    this.showExportAllMenu(this.elements.exportAllPostsComments, 'all-videos');
                 });
             }
             
