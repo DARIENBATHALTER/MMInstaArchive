@@ -642,6 +642,25 @@ body {
     line-height: 1.6;
 }
 
+/* Back Arrow Button */
+.back-arrow-btn {
+    opacity: 0.7;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.back-arrow-btn:hover {
+    opacity: 1;
+    transform: translateX(-2px);
+}
+
+.back-arrow-btn:focus {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
 /* Comments Section */
 .comments-section {
     background: white;
