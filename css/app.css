@@ -1113,10 +1113,9 @@ body {
     background: transparent;
     border-radius: 8px;
     max-height: 45px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
+    overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
@@ -1229,6 +1228,23 @@ body {
     font-size: 0.7em;
     margin-left: 6px;
     font-weight: 600;
+}
+
+/* Responsive adjustments for mini word cloud */
+@media (max-width: 768px) {
+    .mini-word-cloud {
+        gap: 6px;
+    }
+    
+    .mini-word-cloud .mini-word-item {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+    
+    .mini-word-cloud .mini-word-item .count {
+        font-size: 0.6em;
+        padding: 1px 4px;
+    }
 }
 
 /* Analytics Modal Styles */

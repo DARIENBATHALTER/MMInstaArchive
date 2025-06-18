@@ -2394,21 +2394,11 @@ class ArchiveExplorer {
             return;
         }
 
-        // Calculate sizes based on frequency
-        const maxCount = Math.max(...wordFreq.map(w => w.count));
-        const minCount = Math.min(...wordFreq.map(w => w.count));
+        // Start with initial render to measure
+        this.renderMiniWordCloudContent(miniWordCloudElement, wordFreq, 7);
         
-        const html = wordFreq.map(({ word, count }) => {
-            // Truncate long words to prevent overflow
-            const displayWord = word.length > 12 ? word.substring(0, 12) + '...' : word;
-            const title = word.length > 12 ? `"${word}" - ${count} mentions` : `${count} mentions`;
-            
-            return `<span class="mini-word-item" title="${title}" data-word="${word}" style="cursor: pointer;">
-                ${this.escapeHTML(displayWord)} <span class="count">${count}</span>
-            </span>`;
-        }).join('');
-
-        miniWordCloudElement.innerHTML = html;
+        // Check if content overflows and adjust if needed
+        this.adjustMiniWordCloudSize(miniWordCloudElement, wordFreq);
         
         // Add click handlers to word items
         miniWordCloudElement.querySelectorAll('.mini-word-item').forEach(item => {
@@ -2426,6 +2416,57 @@ class ArchiveExplorer {
                 }
             });
         });
+    }
+
+    /**
+     * Render mini word cloud content with specified number of words
+     */
+    renderMiniWordCloudContent(container, wordFreq, maxWords) {
+        const words = wordFreq.slice(0, maxWords);
+        
+        const html = words.map(({ word, count }) => {
+            // Truncate long words to prevent overflow
+            const displayWord = word.length > 12 ? word.substring(0, 12) + '...' : word;
+            const title = word.length > 12 ? `"${word}" - ${count} mentions` : `${count} mentions`;
+            
+            return `<span class="mini-word-item" title="${title}" data-word="${word}" style="cursor: pointer;">
+                ${this.escapeHTML(displayWord)} <span class="count">${count}</span>
+            </span>`;
+        }).join('');
+
+        container.innerHTML = html;
+    }
+
+    /**
+     * Adjust mini word cloud size to fit container
+     */
+    adjustMiniWordCloudSize(container, wordFreq) {
+        const maxAttempts = 3;
+        let attempts = 0;
+        let currentWordCount = 7;
+        
+        while (attempts < maxAttempts && currentWordCount > 3) {
+            // Check if content overflows
+            if (container.scrollWidth > container.clientWidth) {
+                // Reduce number of words
+                currentWordCount--;
+                this.renderMiniWordCloudContent(container, wordFreq, currentWordCount);
+                attempts++;
+            } else {
+                // Content fits, we're done
+                break;
+            }
+        }
+        
+        // If still overflowing after reducing words, make font smaller
+        if (container.scrollWidth > container.clientWidth) {
+            container.style.fontSize = '0.75rem';
+            
+            // One more check - if still overflowing, make even smaller
+            if (container.scrollWidth > container.clientWidth) {
+                container.style.fontSize = '0.7rem';
+            }
+        }
     }
 
     /**
