@@ -900,16 +900,22 @@ class ExportService {
             const overlayPath = isDark ? 'assets/blankdarkmode.png' : 'assets/blanklightmode.png';
             console.log(`📱 Loading iPhone template: ${overlayPath} (format: ${format}, isDark: ${isDark})`);
             
-            try {
-                const overlay = await this.loadImage(overlayPath);
-                console.log(`✅ Successfully loaded iPhone template: ${overlayPath}`);
-                ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
-            } catch (error) {
-                console.error(`❌ Failed to load iPhone template: ${overlayPath}`, error);
-                console.log(`🔄 Creating fallback iPhone frame...`);
-                
-                // Create a basic iPhone frame as fallback
+            // Temporary fix: Use fallback for light mode while we fix the corrupted PNG
+            if (!isDark) {
+                console.log(`🔄 Using fallback frame for light mode (temporary fix)`);
                 this.drawFallbackiPhoneFrame(ctx, isDark);
+            } else {
+                try {
+                    const overlay = await this.loadImage(overlayPath);
+                    console.log(`✅ Successfully loaded iPhone template: ${overlayPath}`);
+                    ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
+                } catch (error) {
+                    console.error(`❌ Failed to load iPhone template: ${overlayPath}`, error);
+                    console.log(`🔄 Creating fallback iPhone frame...`);
+                    
+                    // Create a basic iPhone frame as fallback
+                    this.drawFallbackiPhoneFrame(ctx, isDark);
+                }
             }
             
             // 3. Draw the comment at 40% height  
