@@ -420,6 +420,7 @@ body {
 .navbar-brand i {
     font-size: 2.2rem;
     padding-left: 8px;
+    margin-right: 0.75rem !important; /* Override me-2 class for more space */
 }
 
 #channel-navigation {
