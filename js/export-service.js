@@ -846,8 +846,8 @@ class ExportService {
             const overlay = await this.loadImage(overlayPath);
             ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
             
-            // 3. Draw the comment at 50% height
-            const commentY = canvas.height * 0.5;
+            // 3. Draw the comment at 40% height  
+            const commentY = canvas.height * 0.4;
             this.drawComment(ctx, comment, commentY, isDark);
             
             // Convert canvas to blob
