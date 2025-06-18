@@ -519,6 +519,9 @@ class ArchiveExplorer {
             const element = document.getElementById(id);
             if (element) {
                 this.elements[key] = element;
+                if (key === 'exportVideoComments' || key === 'exportAllVideos') {
+                    console.log(`✅ Export button found: ${id}`, element);
+                }
             } else {
                 console.warn(`⚠️ Optional element not found: ${id}`);
                 this.elements[key] = null;
@@ -647,6 +650,7 @@ class ArchiveExplorer {
             if (this.elements.exportVideoComments) {
                 this.elements.exportVideoComments.addEventListener('click', (e) => {
                     e.preventDefault();
+                    console.log('Export video comments button clicked');
                     this.showExportAllMenu(this.elements.exportVideoComments, 'single-video');
                 });
             }
@@ -661,6 +665,7 @@ class ArchiveExplorer {
             if (this.elements.exportAllVideos) {
                 this.elements.exportAllVideos.addEventListener('click', (e) => {
                     e.preventDefault();
+                    console.log('Export all videos button clicked');
                     this.showExportAllMenu(this.elements.exportAllVideos, 'all-videos');
                 });
             }
