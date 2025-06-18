@@ -19,6 +19,10 @@ class ArchiveExplorer {
         // UI elements
         this.elements = {};
         
+        // Components
+        this.videoGridComponent = null;
+        this.commentListComponent = null;
+        
         this.initializeApp();
     }
 
@@ -66,84 +70,24 @@ class ArchiveExplorer {
      * Set up event listeners for mode selection
      */
     setupModeEventListeners() {
-        const selectLocalArchiveBtn = document.getElementById('selectLocalArchiveBtn');
-        const selectYouTubeBtn = document.getElementById('selectYouTubeBtn');
-        const backToModeSelection = document.getElementById('backToModeSelection');
-        const selectDirectoryBtn = document.getElementById('selectDirectoryBtn');
-        const useLocalServerBtn = document.getElementById('useLocalServerBtn');
-        const continueToAppBtn = document.getElementById('continueToAppBtn');
-        const retryDirectoryBtn = document.getElementById('retryDirectoryBtn');
+        const selectInstagramBtn = document.getElementById('selectInstagramBtn');
         
-        // Make entire cards clickable
-        const localArchiveCard = document.getElementById('localArchiveCard');
-        const youtubeCard = document.getElementById('youtubeCard');
+        // Make entire card clickable
+        const instagramCard = document.getElementById('instagramCard');
         
-        // Local Archive Mode Selection (entire card clickable)
-        if (localArchiveCard) {
-            localArchiveCard.addEventListener('click', async (e) => {
+        // Instagram Mode Selection (entire card clickable)
+        if (instagramCard) {
+            instagramCard.addEventListener('click', async (e) => {
                 // Prevent double-click if clicking on button
                 if (e.target.tagName === 'BUTTON') return;
-                await this.handleLocalArchiveModeSelection();
+                await this.handleInstagramModeSelection();
             });
         }
         
-        if (selectLocalArchiveBtn) {
-            selectLocalArchiveBtn.addEventListener('click', async (e) => {
+        if (selectInstagramBtn) {
+            selectInstagramBtn.addEventListener('click', async (e) => {
                 e.stopPropagation(); // Prevent card click
-                await this.handleLocalArchiveModeSelection();
-            });
-        }
-        
-        // YouTube Mode Selection (entire card clickable)
-        if (youtubeCard) {
-            youtubeCard.addEventListener('click', async (e) => {
-                // Prevent double-click if clicking on button
-                if (e.target.tagName === 'BUTTON') return;
-                await this.handleYouTubeModeSelection();
-            });
-        }
-        
-        if (selectYouTubeBtn) {
-            selectYouTubeBtn.addEventListener('click', async (e) => {
-                e.stopPropagation(); // Prevent card click
-                await this.handleYouTubeModeSelection();
-            });
-        }
-        
-        // Back to mode selection
-        if (backToModeSelection) {
-            backToModeSelection.addEventListener('click', () => {
-                this.showModeSelection();
-            });
-        }
-        
-        // Directory selection (for local archive mode)
-        if (selectDirectoryBtn) {
-            selectDirectoryBtn.addEventListener('click', async () => {
-                await this.handleDirectorySelection();
-            });
-        }
-        
-        // Local server fallback approach
-        if (useLocalServerBtn) {
-            useLocalServerBtn.addEventListener('click', () => {
-                this.handleLocalServerMode();
-            });
-        }
-        
-        // Continue to app after successful setup
-        if (continueToAppBtn) {
-            continueToAppBtn.addEventListener('click', () => {
-                this.hideModeSelection();
-                this.startApp();
-            });
-        }
-        
-        // Retry setup
-        if (retryDirectoryBtn) {
-            retryDirectoryBtn.addEventListener('click', () => {
-                this.hideDirectoryError();
-                this.showLocalArchiveSetup();
+                await this.handleInstagramModeSelection();
             });
         }
     }
@@ -189,46 +133,26 @@ class ArchiveExplorer {
     }
 
     /**
-     * Handle Local Archive mode selection
+     * Handle Instagram mode selection
      */
-    async handleLocalArchiveModeSelection() {
-        console.log('🎛️ User selected Local Archive mode');
-        this.modeManager.setMode('local');
-        
-        // Check if File System Access API is supported
-        if (this.modeManager.directoryManager.isSupported) {
-            // Immediately open directory selection dialog
-            await this.handleDirectorySelection();
-        } else {
-            // Show setup screen for local server fallback
-            this.showLocalArchiveSetup();
-        }
-    }
-
-    /**
-     * Handle YouTube mode selection
-     */
-    async handleYouTubeModeSelection() {
+    async handleInstagramModeSelection() {
         try {
-            console.log('🎛️ User selected YouTube mode');
+            console.log('🎛️ User selected Instagram mode');
             
-            this.showModeStatus('Initializing YouTube mode...');
+            this.showModeStatus('Loading Instagram archive...');
             
-            // Initialize YouTube mode
-            const result = await this.modeManager.initializeYouTubeMode();
-            this.modeManager.setMode('youtube');
+            // Set mode and configure data manager
+            this.modeManager.setMode('instagram');
+            this.dataManager.dataSource = 'instagram';
             
-            // Show success toast and auto-close modal
-            this.showSuccessToast('YouTube mode activated successfully!');
-            
-            // Auto-close modal after brief delay
+            // Auto-close modal and start app
             setTimeout(() => {
                 this.hideModeSelection();
                 this.startApp();
-            }, 1500);
+            }, 1000);
             
         } catch (error) {
-            console.error('YouTube mode initialization failed:', error);
+            console.error('Instagram mode initialization failed:', error);
             this.showModeError(error.message);
         }
     }
@@ -463,6 +387,8 @@ class ArchiveExplorer {
             videoViews: 'videoViews',
             videoCommentCount: 'videoCommentCount',
             videoDescription: 'videoDescription',
+            captionComment: 'captionComment',
+            captionTime: 'captionTime',
             commentsList: 'commentsList',
             commentSearch: 'commentSearch',
             commentSort: 'commentSort',
@@ -481,7 +407,6 @@ class ArchiveExplorer {
             commentInsights: 'commentInsights',
             wordCloud: 'wordCloud',
             likedWords: 'likedWords',
-            breadcrumb: 'breadcrumb'
         };
 
         this.elements = {};
@@ -515,6 +440,27 @@ class ArchiveExplorer {
      */
     setupEventListeners() {
         try {
+            // Initialize VideoGridComponent
+            if (this.elements.videoGrid) {
+                this.videoGridComponent = new VideoGridComponent(this.elements.videoGrid, this.dataManager);
+                this.videoGridComponent.setVideoClickHandler((videoId) => {
+                    this.showVideoDetail(videoId);
+                });
+            }
+            
+            // Initialize CommentListComponent
+            if (this.elements.commentsList) {
+                this.commentListComponent = new CommentListComponent(this.elements.commentsList, this.exportService);
+            }
+            
+            // Add back button handler for Instagram post view
+            const backToGridBtn = document.getElementById('backToGrid');
+            if (backToGridBtn) {
+                backToGridBtn.addEventListener('click', () => {
+                    this.hideVideoDetail();
+                });
+            }
+            
             // Header search (if elements exist)
             if (this.elements.searchInput) {
                 this.elements.searchInput.addEventListener('input', this.debounce(() => {
@@ -547,14 +493,6 @@ class ArchiveExplorer {
                 });
             }
 
-            // Video detail navigation
-            if (this.elements.breadcrumb) {
-                this.elements.breadcrumb.addEventListener('click', (e) => {
-                    if (e.target.textContent === 'Videos') {
-                        this.showVideoGrid();
-                    }
-                });
-            }
 
             // Comment search and sort
             if (this.elements.commentSearch) {
@@ -582,6 +520,23 @@ class ArchiveExplorer {
                     this.exportVideoComments();
                 });
             }
+            
+            // Post Analytics toggle
+            const postAnalyticsToggle = document.getElementById('postAnalyticsToggle');
+            if (postAnalyticsToggle) {
+                console.log('✅ Post analytics toggle found and event listener added');
+                postAnalyticsToggle.addEventListener('click', (e) => {
+                    console.log('🔥 Post analytics toggle clicked!');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.toggleAnalyticsPanel();
+                });
+            } else {
+                console.error('❌ Post analytics toggle not found in DOM during setup');
+            }
+            
+            // Analytics tab switching
+            this.setupAnalyticsTabs();
 
             // Export all videos
             if (this.elements.exportAllVideos) {
@@ -697,17 +652,14 @@ class ArchiveExplorer {
      * Render video grid
      */
     renderVideoGrid(videos) {
-        const html = videos.map(video => this.createVideoCard(video)).join('');
-        this.elements.videoGrid.innerHTML = html;
-        
-        // Add click handlers
-        this.elements.videoGrid.addEventListener('click', (e) => {
-            const videoCard = e.target.closest('.video-card');
-            if (videoCard) {
-                const videoId = videoCard.dataset.videoId;
-                this.showVideoDetail(videoId);
-            }
-        });
+        if (this.videoGridComponent) {
+            // Use the VideoGridComponent for Instagram-style grid
+            this.videoGridComponent.render(videos);
+        } else {
+            // Fallback to old method if component not initialized
+            const html = videos.map(video => this.createVideoCard(video)).join('');
+            this.elements.videoGrid.innerHTML = html;
+        }
     }
 
     /**
@@ -860,12 +812,13 @@ class ArchiveExplorer {
             this.elements.videoGridView.style.display = 'none';
             this.elements.videoDetailView.style.display = 'block';
             
+            // Add single post mode class to remove app padding
+            document.getElementById('app').classList.add('single-post-mode');
+            
             // Hide channel navigation tools and stats bar
             document.getElementById('channel-navigation').style.display = 'none';
-            this.elements.statsBar.style.display = 'none';
+            document.getElementById('statsBarContainer').style.display = 'none';
             
-            // Update breadcrumb
-            this.updateBreadcrumb(['Videos', video.title]);
             
             // Load video
             await this.videoPlayer.loadVideo(video, this.dataManager);
@@ -880,10 +833,353 @@ class ArchiveExplorer {
             // Generate and show insights
             await this.generateCommentInsights();
             
+            // Set up post analytics toggle (in case it wasn't set up during initial load)
+            this.setupAnalyticsToggle();
+            
         } catch (error) {
             console.error('❌ Failed to show video detail:', error);
             this.showError('Failed to load video');
         }
+    }
+    
+    /**
+     * Set up analytics toggle event listener
+     */
+    setupAnalyticsToggle() {
+        const postAnalyticsToggle = document.getElementById('postAnalyticsToggle');
+        if (postAnalyticsToggle && !postAnalyticsToggle.hasAttribute('data-listener-added')) {
+            console.log('🔧 Setting up analytics toggle event listener');
+            postAnalyticsToggle.addEventListener('click', (e) => {
+                console.log('🔥 Analytics toggle clicked!');
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleAnalyticsPanel();
+            });
+            postAnalyticsToggle.setAttribute('data-listener-added', 'true');
+        } else if (!postAnalyticsToggle) {
+            console.warn('⚠️ Analytics toggle not found');
+        } else {
+            console.log('ℹ️ Analytics toggle listener already exists');
+        }
+    }
+    
+    /**
+     * Toggle analytics panel visibility
+     */
+    async toggleAnalyticsPanel() {
+        console.log('🔥 toggleAnalyticsPanel called');
+        
+        // Prevent multiple rapid calls
+        if (this.isTogglingAnalytics) {
+            console.log('🚫 Analytics toggle already in progress');
+            return;
+        }
+        this.isTogglingAnalytics = true;
+        
+        if (!this.currentVideo) {
+            console.log('❌ No current video');
+            this.isTogglingAnalytics = false;
+            return;
+        }
+        
+        const toggle = document.getElementById('postAnalyticsToggle');
+        const panel = document.getElementById('analyticsPanel');
+        
+        if (!toggle) {
+            console.error('❌ Analytics toggle not found');
+            this.isTogglingAnalytics = false;
+            return;
+        }
+        if (!panel) {
+            console.error('❌ Analytics panel not found');
+            this.isTogglingAnalytics = false;
+            return;
+        }
+        
+        const icon = toggle.querySelector('.toggle-icon');
+        
+        const isExpanded = toggle.getAttribute('data-expanded') === 'true';
+        console.log('📊 Current expanded state:', isExpanded);
+        
+        if (isExpanded) {
+            // Hide panel
+            console.log('🔽 Hiding analytics panel');
+            panel.style.display = 'none';
+            toggle.setAttribute('data-expanded', 'false');
+            if (icon) icon.classList.remove('rotated');
+        } else {
+            // Show panel and load analytics
+            console.log('🔼 Showing analytics panel');
+            panel.style.display = 'block';
+            panel.style.backgroundColor = '#ffcccc'; // Temporary debug color
+            panel.style.minHeight = '200px'; // Ensure it has height
+            toggle.setAttribute('data-expanded', 'true');
+            if (icon) icon.classList.add('rotated');
+            
+            // Load analytics data
+            try {
+                await this.loadAnalyticsData();
+                console.log('✅ Analytics data loaded successfully');
+            } catch (error) {
+                console.error('❌ Failed to load analytics data:', error);
+            }
+        }
+        
+        // Reset the toggle flag
+        this.isTogglingAnalytics = false;
+    }
+    
+    /**
+     * Set up analytics tab switching
+     */
+    setupAnalyticsTabs() {
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.analytics-tab')) {
+                const tab = e.target.closest('.analytics-tab');
+                const tabName = tab.getAttribute('data-tab');
+                this.switchAnalyticsTab(tabName);
+            }
+        });
+    }
+    
+    /**
+     * Switch between analytics tabs
+     */
+    switchAnalyticsTab(tabName) {
+        // Update tab buttons
+        document.querySelectorAll('.analytics-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        
+        // Show/hide tab content
+        document.querySelectorAll('.tab-pane').forEach(pane => {
+            pane.classList.remove('active');
+        });
+        document.getElementById(`${tabName}Tab`).classList.add('active');
+    }
+    
+    /**
+     * Load all analytics data
+     */
+    async loadAnalyticsData() {
+        try {
+            console.log('📊 Loading analytics data for:', this.currentVideo.video_id);
+            
+            const comments = await this.dataManager.getAllComments(this.currentVideo.video_id, {});
+            const flatComments = this.flattenComments(comments);
+            
+            if (flatComments.length === 0) {
+                console.warn('No comments found for analytics');
+                return;
+            }
+            
+            // Load frequent words
+            const wordFreq = this.analyzeWordFrequency(flatComments);
+            this.renderAnalyticsWordCloud(wordFreq);
+            
+            // Load liked words
+            const likedWords = this.analyzeLikedCommentWords(flatComments);
+            this.renderAnalyticsLikedWords(likedWords);
+            
+            // Load sentiment analysis
+            const sentimentData = this.analyzeSentiment(flatComments);
+            this.renderSentimentAnalysis(sentimentData);
+            
+            // Load themes analysis
+            const themesData = this.analyzeThemes(flatComments);
+            this.renderThemesAnalysis(themesData);
+            
+        } catch (error) {
+            console.error('❌ Error loading analytics data:', error);
+        }
+    }
+    
+    /**
+     * Render word cloud in analytics panel
+     */
+    renderAnalyticsWordCloud(wordFreq) {
+        const container = document.getElementById('analyticsWordCloud');
+        if (!container) return;
+        
+        if (wordFreq.length === 0) {
+            container.innerHTML = '<div class="text-muted">No word data available</div>';
+            return;
+        }
+        
+        // Calculate sizes based on frequency
+        const maxCount = Math.max(...wordFreq.map(w => w.count));
+        const minCount = Math.min(...wordFreq.map(w => w.count));
+        
+        const html = wordFreq.slice(0, 15).map(({ word, count }) => {
+            const relativeSize = minCount === maxCount ? 2 : 
+                Math.round(1 + (count - minCount) / (maxCount - minCount) * 3);
+                
+            return `<span class="analytics-word-item size-${relativeSize}" title="${count} mentions">
+                ${word} <span style="opacity: 0.7;">${count}</span>
+            </span>`;
+        }).join('');
+        
+        container.innerHTML = html;
+    }
+    
+    /**
+     * Render liked words in analytics panel
+     */
+    renderAnalyticsLikedWords(likedWords) {
+        const container = document.getElementById('analyticsLikedWords');
+        if (!container) return;
+        
+        if (likedWords.length === 0) {
+            container.innerHTML = '<div class="text-muted">No liked word data available</div>';
+            return;
+        }
+        
+        const html = likedWords.slice(0, 12).map(({ word, avgLikes, count }) => {
+            return `<span class="analytics-liked-item" title="Average ${Math.round(avgLikes)} likes in ${count} comments">
+                ${word} <span style="opacity: 0.8;">${Math.round(avgLikes)}</span>
+            </span>`;
+        }).join('');
+        
+        container.innerHTML = html;
+    }
+    
+    /**
+     * Analyze comment sentiment (improved)
+     */
+    analyzeSentiment(comments) {
+        const sentiments = {
+            positive: { count: 0, words: ['amazing', 'love', 'thank', 'great', 'wonderful', 'fantastic', 'incredible', 'awesome', 'perfect', 'blessed'] },
+            grateful: { count: 0, words: ['grateful', 'thankful', 'bless', 'appreciate', 'thank you', 'thanks'] },
+            healing: { count: 0, words: ['healing', 'better', 'improved', 'recovery', 'healed', 'relief', 'helped'] },
+            questioning: { count: 0, words: ['?', 'how', 'what', 'when', 'where', 'why', 'can you', 'could you'] }
+        };
+        
+        comments.forEach(comment => {
+            const text = (comment.content || comment.text || '').toLowerCase();
+            
+            Object.keys(sentiments).forEach(sentiment => {
+                sentiments[sentiment].words.forEach(word => {
+                    if (text.includes(word)) {
+                        sentiments[sentiment].count++;
+                    }
+                });
+            });
+        });
+        
+        const total = comments.length;
+        return {
+            positive: Math.round((sentiments.positive.count / total) * 100),
+            grateful: Math.round((sentiments.grateful.count / total) * 100),
+            healing: Math.round((sentiments.healing.count / total) * 100),
+            questioning: Math.round((sentiments.questioning.count / total) * 100)
+        };
+    }
+    
+    /**
+     * Render sentiment analysis
+     */
+    renderSentimentAnalysis(sentimentData) {
+        const container = document.getElementById('sentimentAnalysis');
+        if (!container) return;
+        
+        const html = `
+            <div class="sentiment-grid">
+                <div class="sentiment-item">
+                    <span class="sentiment-emoji">😍</span>
+                    <div class="sentiment-label">Positive</div>
+                    <div class="sentiment-percentage">${sentimentData.positive}%</div>
+                </div>
+                <div class="sentiment-item">
+                    <span class="sentiment-emoji">🙏</span>
+                    <div class="sentiment-label">Grateful</div>
+                    <div class="sentiment-percentage">${sentimentData.grateful}%</div>
+                </div>
+                <div class="sentiment-item">
+                    <span class="sentiment-emoji">💚</span>
+                    <div class="sentiment-label">Healing</div>
+                    <div class="sentiment-percentage">${sentimentData.healing}%</div>
+                </div>
+                <div class="sentiment-item">
+                    <span class="sentiment-emoji">❓</span>
+                    <div class="sentiment-label">Questions</div>
+                    <div class="sentiment-percentage">${sentimentData.questioning}%</div>
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    }
+    
+    /**
+     * Analyze themes (improved)
+     */
+    analyzeThemes(comments) {
+        const themes = {
+            'Recipe Requests': { count: 0, keywords: ['recipe', 'how to make', 'ingredients', 'link'] },
+            'Health Questions': { count: 0, keywords: ['how long', 'dosage', 'how much', 'safe', 'pregnancy'] },
+            'Success Stories': { count: 0, keywords: ['helped', 'better', 'improved', 'healed', 'working', 'results'] },
+            'Protocol Questions': { count: 0, keywords: ['celery juice', 'heavy metal', 'detox', 'protocol', 'supplements'] },
+            'Gratitude': { count: 0, keywords: ['thank you', 'grateful', 'bless', 'saved my life', 'appreciate'] }
+        };
+        
+        comments.forEach(comment => {
+            const text = (comment.content || comment.text || '').toLowerCase();
+            
+            Object.keys(themes).forEach(theme => {
+                themes[theme].keywords.forEach(keyword => {
+                    if (text.includes(keyword)) {
+                        themes[theme].count++;
+                    }
+                });
+            });
+        });
+        
+        // Convert to array and sort by count
+        return Object.entries(themes)
+            .map(([name, data]) => ({ name, count: data.count }))
+            .sort((a, b) => b.count - a.count)
+            .filter(theme => theme.count > 0);
+    }
+    
+    /**
+     * Render themes analysis
+     */
+    renderThemesAnalysis(themesData) {
+        const container = document.getElementById('themesAnalysis');
+        if (!container) return;
+        
+        if (themesData.length === 0) {
+            container.innerHTML = '<div class="text-muted">No themes identified</div>';
+            return;
+        }
+        
+        const html = themesData.slice(0, 6).map(theme => {
+            const descriptions = {
+                'Recipe Requests': 'People asking for recipes and preparation instructions',
+                'Health Questions': 'Questions about dosages, safety, and usage',
+                'Success Stories': 'Positive healing experiences and results',
+                'Protocol Questions': 'Questions about MM protocols and methods',
+                'Gratitude': 'Expressions of thanks and appreciation'
+            };
+            
+            return `
+                <div class="theme-item">
+                    <span class="theme-count">${theme.count}</span>
+                    <div class="theme-title">${theme.name}</div>
+                    <div class="theme-description">${descriptions[theme.name] || 'Related discussion topics'}</div>
+                </div>
+            `;
+        }).join('');
+        
+        container.innerHTML = html;
+    }
+
+    /**
+     * Hide video detail view and return to grid
+     */
+    hideVideoDetail() {
+        this.showVideoGrid();
     }
 
     /**
@@ -896,11 +1192,13 @@ class ArchiveExplorer {
         this.elements.videoDetailView.style.display = 'none';
         this.elements.videoGridView.style.display = 'block';
         
+        // Remove single post mode class to restore app padding
+        document.getElementById('app').classList.remove('single-post-mode');
+        
         // Show channel navigation tools and stats bar
         document.getElementById('channel-navigation').style.display = 'flex';
-        this.elements.statsBar.style.display = 'block';
+        document.getElementById('statsBarContainer').style.display = 'flex';
         
-        this.updateBreadcrumb(['Videos']);
         
         // Clean up video player
         if (this.videoPlayer) {
@@ -912,18 +1210,84 @@ class ArchiveExplorer {
      * Update video info display
      */
     updateVideoInfo(video) {
-        this.elements.videoTitle.textContent = video.title;
+        // Update date (Instagram style - relative time)
+        if (this.elements.videoDate) {
+            const date = new Date(video.published_at);
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            let timeText;
+            if (diffDays < 1) {
+                timeText = 'Today';
+            } else if (diffDays < 7) {
+                timeText = `${diffDays}d`;
+            } else if (diffDays < 30) {
+                timeText = `${Math.floor(diffDays / 7)}w`;
+            } else {
+                const formattedDate = (date.getMonth() + 1) + '/' + date.getDate() + '/' + date.getFullYear();
+                timeText = formattedDate;
+            }
+            
+            this.elements.videoDate.textContent = timeText;
+        }
         
-        // Format date as MM/DD/YYYY
-        const date = new Date(video.published_at);
-        const formattedDate = (date.getMonth() + 1) + '/' + date.getDate() + '/' + date.getFullYear();
+        // Update likes count (Instagram shows likes, not views)
+        if (this.elements.videoViews) {
+            this.elements.videoViews.textContent = this.formatNumber(video.like_count || video.view_count);
+        }
         
-        this.elements.videoDate.textContent = formattedDate;
-        this.elements.videoViews.textContent = `${this.formatNumber(video.view_count)} views`;
-        this.elements.videoCommentCount.textContent = `${this.formatNumber(video.comment_count)} comments`;
-        // Preserve line breaks in description
-        const description = video.description || 'No description available.';
-        this.elements.videoDescription.innerHTML = this.escapeHTML(description).replace(/\n/g, '<br>');
+        // Update description/caption in the sidebar
+        if (this.elements.videoDescription) {
+            const description = video.description || '';
+            this.elements.videoDescription.innerHTML = this.escapeHTML(description).replace(/\n/g, '<br>');
+        }
+        
+        // Update caption as first comment (Instagram style)
+        const captionDescElement = document.querySelector('#captionComment #videoDescription');
+        if (captionDescElement) {
+            const caption = video.caption || video.description || '';
+            captionDescElement.innerHTML = this.escapeHTML(caption).replace(/\n/g, '<br>');
+        }
+        
+        // Update profile pictures - use the local avatar image
+        const avatarPath = 'MMCommentExplorer.webp';
+        
+        // Update caption profile picture
+        const captionProfileImg = document.querySelector('#captionComment .profile-avatar img');
+        if (captionProfileImg) {
+            captionProfileImg.src = avatarPath;
+        }
+        
+        // Update post header profile picture
+        const headerProfileImg = document.querySelector('.post-meta-header .profile-avatar img');
+        if (headerProfileImg) {
+            headerProfileImg.src = avatarPath;
+        }
+        
+        // Update caption time
+        if (this.elements.captionTime) {
+            const date = new Date(video.published_at);
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            let timeText;
+            if (diffHours < 1) {
+                timeText = 'now';
+            } else if (diffHours < 24) {
+                timeText = `${diffHours}h`;
+            } else if (diffDays < 7) {
+                timeText = `${diffDays}d`;
+            } else if (diffDays < 30) {
+                timeText = `${Math.floor(diffDays / 7)}w`;
+            } else {
+                timeText = `${Math.floor(diffDays / 30)}mo`;
+            }
+            
+            this.elements.captionTime.textContent = timeText;
+        }
     }
 
     /**
@@ -934,16 +1298,23 @@ class ArchiveExplorer {
 
         try {
             const filters = {
-                search: this.elements.commentSearch.value,
-                sortBy: this.elements.commentSort.value
+                search: this.elements.commentSearch?.value || '',
+                sortBy: this.elements.commentSort?.value || 'likes-desc'
             };
+            
+            console.log(`Loading comments for ${this.currentVideo.video_id}...`);
             
             // Load all comments at once for better UX
             const allComments = await this.dataManager.getAllComments(this.currentVideo.video_id, filters);
             
+            console.log(`Loaded ${allComments.length} comments for ${this.currentVideo.video_id}`);
+            
             this.renderComments(allComments);
+            
             // Hide load more button since we're loading all comments
-            this.elements.loadMoreComments.style.display = 'none';
+            if (this.elements.loadMoreComments) {
+                this.elements.loadMoreComments.style.display = 'none';
+            }
             
         } catch (error) {
             console.error('❌ Failed to load comments:', error);
@@ -955,11 +1326,14 @@ class ArchiveExplorer {
      * Render comments list
      */
     renderComments(comments) {
-        const html = comments.map(comment => this.createCommentCard(comment)).join('');
-        this.elements.commentsList.innerHTML = html;
-        
-        // Event handlers are set up once in setupEventListeners() using event delegation
-        // No need to add them here repeatedly
+        if (this.commentListComponent) {
+            // Use the CommentListComponent for proper Instagram-style comments
+            this.commentListComponent.render(comments);
+        } else {
+            // Fallback to manual rendering
+            const html = comments.map(comment => this.createCommentCard(comment)).join('');
+            this.elements.commentsList.innerHTML = html;
+        }
     }
 
     /**
@@ -1213,24 +1587,6 @@ class ArchiveExplorer {
         await this.loadVideoGrid();
     }
 
-    /**
-     * Update breadcrumb navigation
-     */
-    updateBreadcrumb(items) {
-        const html = items.map((item, index) => {
-            const isLast = index === items.length - 1;
-            const classes = isLast ? 'breadcrumb-item active' : 'breadcrumb-item';
-            
-            // Add home icon to "Videos" item
-            const itemText = item === 'Videos' ? 
-                `<i class="fas fa-home"></i>${this.escapeHTML(item)}` : 
-                this.escapeHTML(item);
-                
-            return `<li class="${classes}">${itemText}</li>`;
-        }).join('');
-        
-        this.elements.breadcrumb.innerHTML = html;
-    }
 
     /**
      * Update stats display
@@ -1244,7 +1600,7 @@ class ArchiveExplorer {
      * Update result count
      */
     updateResultCount(count) {
-        this.elements.resultCount.textContent = `${this.formatNumber(count)} videos`;
+        this.elements.resultCount.textContent = `${this.formatNumber(count)} posts`;
     }
 
     /**
@@ -1435,6 +1791,7 @@ class ArchiveExplorer {
                 // Use pre-computed data for instant loading
                 this.renderWordCloud(preComputed.word_cloud);
                 this.renderLikedWords(preComputed.liked_words);
+                this.renderMiniWordCloud(preComputed.word_cloud.slice(0, 5)); // Show top 5 words in mini cloud
                 this.elements.commentInsights.style.display = 'block';
                 return;
             }
@@ -1455,6 +1812,7 @@ class ArchiveExplorer {
             // Update UI
             this.renderWordCloud(wordFreq);
             this.renderLikedWords(likedWords);
+            this.renderMiniWordCloud(wordFreq.slice(0, 5)); // Show top 5 words in mini cloud
             this.elements.commentInsights.style.display = 'block';
 
         } catch (error) {
@@ -1485,7 +1843,8 @@ class ArchiveExplorer {
         const wordCounts = {};
 
         comments.forEach(comment => {
-            const words = comment.text.toLowerCase()
+            const text = comment.text || comment.content || '';
+            const words = text.toLowerCase()
                 .replace(/[^\w\s]/g, '') // Remove punctuation
                 .split(/\s+/)
                 .filter(word => word.length > 2 && !stopWords.has(word));
@@ -1514,7 +1873,8 @@ class ArchiveExplorer {
         const wordLikeScores = {};
 
         topComments.forEach(comment => {
-            const words = comment.text.toLowerCase()
+            const text = comment.text || comment.content || '';
+            const words = text.toLowerCase()
                 .replace(/[^\w\s]/g, '')
                 .split(/\s+/)
                 .filter(word => word.length > 3);
@@ -1580,6 +1940,35 @@ class ArchiveExplorer {
     }
 
     /**
+     * Render mini word cloud above analytics button
+     */
+    renderMiniWordCloud(wordFreq) {
+        const miniWordCloudElement = document.getElementById('miniWordCloud');
+        if (!miniWordCloudElement) return;
+        
+        if (wordFreq.length === 0) {
+            miniWordCloudElement.innerHTML = '<div class="text-muted text-center small">No data</div>';
+            return;
+        }
+
+        // Calculate sizes based on frequency
+        const maxCount = Math.max(...wordFreq.map(w => w.count));
+        const minCount = Math.min(...wordFreq.map(w => w.count));
+        
+        const html = wordFreq.map(({ word, count }) => {
+            // Calculate relative size (1-4 scale)
+            const relativeSize = minCount === maxCount ? 2 : 
+                Math.round(1 + (count - minCount) / (maxCount - minCount) * 3);
+            
+            return `<span class="mini-word-item size-${relativeSize}" title="${count} mentions">
+                ${word} <span class="count">${count}</span>
+            </span>`;
+        }).join('');
+
+        miniWordCloudElement.innerHTML = html;
+    }
+
+    /**
      * Switch between insight tabs
      */
     switchInsightTab(tabName) {
@@ -1624,6 +2013,38 @@ class ArchiveExplorer {
         } else {
             console.log('ℹ️ Using standard export mode with 49 comments per ZIP file for compatibility.');
         }
+    }
+    
+    /**
+     * Extract question from comment
+     */
+    extractQuestion(content) {
+        const sentences = content.split(/[.!?]+/);
+        const question = sentences.find(s => s.includes('?')) || sentences[0];
+        return question.trim() + (question.includes('?') ? '' : '?');
+    }
+    
+    /**
+     * Extract main topic from caption
+     */
+    extractTopic(caption) {
+        // Look for Medical Medium specific topics
+        const topics = ['Heavy Metal Detox', 'Celery Juice', 'Liver Rescue', 'Brain Saver', 'Aloe Vera', 'Wild Blueberries'];
+        for (const topic of topics) {
+            if (caption.toLowerCase().includes(topic.toLowerCase())) {
+                return topic;
+            }
+        }
+        // Return first few words as fallback
+        return caption.split(' ').slice(0, 3).join(' ');
+    }
+    
+    /**
+     * Truncate text helper
+     */
+    truncateText(text, maxLength) {
+        if (text.length <= maxLength) return text;
+        return text.substr(0, maxLength) + '...';
     }
 }
 

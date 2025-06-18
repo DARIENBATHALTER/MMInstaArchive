@@ -1,14 +1,14 @@
 /**
- * ModeManager - Handles switching between Local Archive and YouTube modes
- * Provides unified interface for different video sources
+ * ModeManager - Handles Instagram Archive mode
+ * Provides unified interface for Instagram media sources
  */
 class ModeManager {
     constructor() {
-        this.currentMode = null; // 'local' or 'youtube'
+        this.currentMode = 'instagram'; // Default to Instagram mode
         this.directoryManager = new DirectoryManager();
         this.videoMapping = null;
         
-        console.log('🎛️ ModeManager initialized');
+        console.log('🎛️ ModeManager initialized for Instagram');
     }
 
     /**
@@ -41,6 +41,13 @@ class ModeManager {
      */
     isYouTubeMode() {
         return this.currentMode === 'youtube';
+    }
+
+    /**
+     * Check if current mode is Instagram
+     */
+    isInstagramMode() {
+        return this.currentMode === 'instagram';
     }
 
     /**
@@ -145,50 +152,14 @@ class ModeManager {
         const header = document.querySelector('.navbar-brand span');
         if (header) {
             // Keep the title simple, let the badge show the mode
-            header.textContent = 'Medical Medium Archive Explorer';
+            header.textContent = 'MM Instagram Archive Explorer';
         }
 
-        // Add mode badge to header
+        // Remove any existing mode badge
         const existingBadge = document.querySelector('.mode-badge');
         if (existingBadge) {
             existingBadge.remove();
         }
-
-        const navbar = document.querySelector('.navbar-brand');
-        if (navbar) {
-            const badge = document.createElement('span');
-            badge.className = `badge ${this.currentMode === 'youtube' ? 'bg-danger' : 'bg-primary'} mode-badge ms-2`;
-            badge.innerHTML = this.currentMode === 'youtube' ? 
-                '<i class="bi bi-youtube"></i> YouTube' : 
-                '<i class="bi bi-folder"></i> Local';
-            
-            // Check if we're on mobile
-            const isMobile = window.innerWidth <= 768;
-            
-            if (isMobile) {
-                // On mobile, create a container for actions under the title
-                let mobileActions = document.querySelector('.mobile-header-actions');
-                if (!mobileActions) {
-                    mobileActions = document.createElement('div');
-                    mobileActions.className = 'mobile-header-actions';
-                    navbar.appendChild(mobileActions);
-                }
-                
-                // Clear and add badge to mobile actions container
-                mobileActions.innerHTML = '';
-                badge.className = badge.className.replace('ms-2', ''); // Remove margin
-                mobileActions.appendChild(badge);
-            } else {
-                // On desktop, add badge directly to navbar
-                navbar.appendChild(badge);
-            }
-        }
-        
-        // Listen for window resize to update layout
-        window.addEventListener('resize', () => {
-            // Re-run this method on resize to handle layout changes
-            setTimeout(() => this.updateModeIndicator(), 100);
-        });
     }
 
     /**

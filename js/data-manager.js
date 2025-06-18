@@ -1,17 +1,21 @@
 /**
  * DataManager - Handles all data operations for the Medical Medium Archive Explorer
  * Manages JSON loading, IndexedDB storage, and data querying
+ * Now supports both YouTube and Instagram data
  */
 class DataManager {
     constructor() {
         this.db = null;
         this.videos = [];
+        this.posts = []; // Instagram posts
         this.comments = [];
         this.videoMapping = {};
+        this.mediaMapping = {}; // Instagram media mapping
         this.isInitialized = false;
         this.dbName = 'MMArchiveDB';
         this.dbVersion = 1;
         this.usingPreIndexedData = false;
+        this.dataSource = 'instagram'; // Default to Instagram
         
         // Pre-indexed data stores
         this.videoCommentsIndex = null;
@@ -24,21 +28,35 @@ class DataManager {
      */
     async initialize(progressCallback) {
         try {
-            progressCallback?.('Loading video data...', 5);
-            await this.loadVideoData();
-            progressCallback?.('Video data loaded', 15);
+            if (this.dataSource === 'instagram') {
+                progressCallback?.('Loading Instagram posts...', 5);
+                await this.loadInstagramData();
+                progressCallback?.('Instagram data loaded', 15);
 
-            progressCallback?.('Loading comment data...', 20);
-            await this.loadCommentData();
-            if (this.usingPreIndexedData) {
-                progressCallback?.('Pre-indexed data loaded ⚡', 45);
+                progressCallback?.('Loading Instagram comments...', 20);
+                await this.loadInstagramComments();
+                progressCallback?.('Instagram comments loaded', 45);
+
+                progressCallback?.('Loading media mapping...', 50);
+                await this.loadInstagramMediaMapping();
+                progressCallback?.('Media mapping loaded', 55);
             } else {
-                progressCallback?.('Comment data loaded', 45);
-            }
+                progressCallback?.('Loading video data...', 5);
+                await this.loadVideoData();
+                progressCallback?.('Video data loaded', 15);
 
-            progressCallback?.('Loading video mapping...', 50);
-            await this.loadVideoMapping();
-            progressCallback?.('Video mapping loaded', 55);
+                progressCallback?.('Loading comment data...', 20);
+                await this.loadCommentData();
+                if (this.usingPreIndexedData) {
+                    progressCallback?.('Pre-indexed data loaded ⚡', 45);
+                } else {
+                    progressCallback?.('Comment data loaded', 45);
+                }
+
+                progressCallback?.('Loading video mapping...', 50);
+                await this.loadVideoMapping();
+                progressCallback?.('Video mapping loaded', 55);
+            }
 
             // Skip IndexedDB setup if we have pre-indexed data
             if (this.videoCommentsIndex && this.searchIndex && this.wordFreqIndex) {
@@ -57,7 +75,11 @@ class DataManager {
             this.isInitialized = true;
             
             console.log('✅ DataManager initialized successfully');
-            console.log(`📊 ${this.videos.length} videos, ${this.comments.length} comments`);
+            if (this.dataSource === 'instagram') {
+                console.log(`📊 ${this.posts.length} posts, ${this.comments.length} comments`);
+            } else {
+                console.log(`📊 ${this.videos.length} videos, ${this.comments.length} comments`);
+            }
             
         } catch (error) {
             console.error('❌ DataManager initialization failed:', error);
@@ -277,6 +299,92 @@ class DataManager {
         } catch (error) {
             console.warn('⚠️ Failed to load video mapping:', error);
             this.videoMapping = {};
+        }
+    }
+
+    /**
+     * Load Instagram posts data
+     */
+    async loadInstagramData() {
+        try {
+            const response = await fetch('data/instagram-posts.json');
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            
+            this.videos = await response.json();
+            this.posts = this.videos; // Use same array for compatibility
+            console.log(`📷 Loaded ${this.posts.length} Instagram posts`);
+            
+            // Process dates and ensure numeric fields
+            this.videos = this.videos.map(post => ({
+                ...post,
+                published_at: new Date(post.published_at),
+                view_count: parseInt(post.view_count) || 0,
+                comment_count: parseInt(post.comment_count) || 0
+            }));
+            
+        } catch (error) {
+            console.error('❌ Failed to load Instagram data:', error);
+            throw new Error('Failed to load Instagram data. Please ensure instagram-posts.json exists.');
+        }
+    }
+
+    /**
+     * Load Instagram comments
+     */
+    async loadInstagramComments() {
+        try {
+            const response = await fetch('data/instagram-comments.json');
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            
+            const commentsObj = await response.json();
+            this.comments = [];
+            
+            // Convert object structure to flat array
+            Object.entries(commentsObj).forEach(([postId, postComments]) => {
+                postComments.forEach(comment => {
+                    this.comments.push({
+                        ...comment,
+                        video_id: postId,
+                        comment_id: comment.id,
+                        text: comment.content,
+                        like_count: comment.reactionsCount,
+                        published_at: new Date(comment.commentAt),
+                        parent_comment_id: comment.depth > 0 ? 'parent' : null,
+                        is_reply: comment.depth > 0
+                    });
+                });
+            });
+            
+            console.log(`💬 Loaded ${this.comments.length} Instagram comments`);
+            
+            // Build video comments index
+            this.buildVideoCommentsIndex();
+            
+        } catch (error) {
+            console.error('❌ Failed to load Instagram comments:', error);
+            // Don't throw - comments are optional
+            this.comments = [];
+        }
+    }
+
+    /**
+     * Load Instagram media mapping
+     */
+    async loadInstagramMediaMapping() {
+        try {
+            const response = await fetch('data/instagram-media-mapping.json');
+            if (!response.ok) {
+                console.warn('⚠️ instagram-media-mapping.json not found');
+                return;
+            }
+            
+            this.mediaMapping = await response.json();
+            this.videoMapping = this.mediaMapping; // Use same object for compatibility
+            console.log(`🗂️ Loaded media mapping for ${Object.keys(this.mediaMapping).length} posts`);
+            
+        } catch (error) {
+            console.warn('⚠️ Failed to load media mapping:', error);
+            this.mediaMapping = {};
         }
     }
 
@@ -611,11 +719,35 @@ class DataManager {
      * Get video file path if available
      */
     getVideoFilePath(videoId) {
-        const mapping = this.videoMapping[videoId];
-        if (mapping && mapping.file_path) {
-            return mapping.file_path;
+        if (this.dataSource === 'instagram') {
+            const mediaFiles = this.mediaMapping[videoId];
+            if (mediaFiles && mediaFiles.length > 0) {
+                // Return the first media file
+                const media = mediaFiles[0];
+                return `instadata/posts/${media.filename}`;
+            }
+        } else {
+            const mapping = this.videoMapping[videoId];
+            if (mapping && mapping.file_path) {
+                return mapping.file_path;
+            }
         }
         return null;
+    }
+
+    /**
+     * Get Instagram media files for a post
+     */
+    getInstagramMediaFiles(postId) {
+        const mediaFiles = this.mediaMapping[postId];
+        if (mediaFiles && mediaFiles.length > 0) {
+            return mediaFiles.map(media => ({
+                ...media,
+                path: `instadata/posts/${media.filename}`,
+                thumbnailPath: media.thumbnail ? `instadata/posts/${media.thumbnail}` : null
+            }));
+        }
+        return [];
     }
 
     /**

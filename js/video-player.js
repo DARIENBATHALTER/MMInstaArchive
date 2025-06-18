@@ -13,7 +13,14 @@ class VideoPlayer {
         this.videoContainer = videoElement.closest('.video-container');
         this.playOverlay = document.getElementById('videoPlayOverlay');
         this.youtubeIframe = null;
-        this.currentPlayerType = null; // 'local' or 'youtube'
+        this.currentPlayerType = null; // 'local', 'youtube', or 'instagram'
+        
+        // Instagram-specific properties
+        this.currentMediaIndex = 0;
+        this.mediaFiles = [];
+        this.imageElement = null;
+        this.carouselControls = null;
+        this.mediaIndicators = null;
         
         // Custom control elements
         this.customControls = document.getElementById('customControls');
@@ -25,9 +32,10 @@ class VideoPlayer {
         this.volumeSlider = document.getElementById('volumeSlider');
         this.fullscreenBtn = document.getElementById('fullscreenBtn');
         
-        console.log('🎥 VideoPlayer v4.0 initialized (YouTube + Local support)');
+        console.log('🎥 VideoPlayer v4.0 initialized (YouTube + Local + Instagram support)');
         this.setupEventListeners();
         this.setupCustomControls();
+        this.createInstagramElements();
     }
 
     /**
@@ -121,6 +129,19 @@ class VideoPlayer {
                 console.log(`🕐 Large time jump: ${lastTime}s → ${this.videoElement.currentTime}s`);
             }
             lastTime = this.videoElement.currentTime;
+        });
+
+        // Keyboard navigation for Instagram carousel
+        document.addEventListener('keydown', (e) => {
+            if (this.currentPlayerType === 'instagram' && this.mediaFiles.length > 1) {
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    this.previousMedia();
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    this.nextMedia();
+                }
+            }
         });
     }
 
@@ -229,19 +250,25 @@ class VideoPlayer {
     }
 
     /**
-     * Load video based on current mode (local or YouTube)
+     * Load video based on current mode (local or YouTube) or Instagram media
      */
     async loadVideo(videoData, dataManager) {
         try {
             this.currentVideo = videoData;
             this.hideError();
             this.showLoading(true);
+            this.resetMedia(); // Reset any previous media state
 
             console.log(`🔍 DEBUG - Video ID: ${videoData.video_id}`);
             console.log(`🔍 DEBUG - Video Title: ${videoData.title}`);
             console.log(`🔍 DEBUG - Current Mode: ${this.modeManager?.getCurrentMode()}`);
+            console.log(`🔍 DEBUG - Media Files:`, videoData.media_files);
             
-            if (this.modeManager?.isYouTubeMode()) {
+            // Check if this is Instagram content with media_files
+            if (videoData.media_files && videoData.media_files.length > 0) {
+                console.log('📸 Loading Instagram media:', videoData.media_files);
+                await this.loadInstagramMedia(videoData, dataManager);
+            } else if (this.modeManager?.isYouTubeMode()) {
                 // YouTube mode - embed YouTube video
                 console.log('🔗 Loading YouTube embed for video:', videoData.title);
                 await this.loadYouTubeVideo(videoData);
@@ -798,6 +825,395 @@ class VideoPlayer {
     }
 
     /**
+     * Create Instagram-specific UI elements
+     */
+    createInstagramElements() {
+        // Create image element for Instagram photos
+        this.imageElement = document.createElement('img');
+        this.imageElement.className = 'instagram-image';
+        this.imageElement.style.cssText = `
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+            background: #000;
+            border-radius: 8px;
+        `;
+        this.videoContainer.appendChild(this.imageElement);
+        
+        // Create carousel controls container
+        this.carouselControls = document.createElement('div');
+        this.carouselControls.className = 'instagram-carousel-controls';
+        this.carouselControls.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            transform: translateY(-50%);
+            display: none;
+            justify-content: space-between;
+            padding: 0 20px;
+            pointer-events: none;
+            z-index: 5;
+        `;
+        
+        // Create previous button
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'carousel-nav-btn prev';
+        prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+        prevBtn.style.cssText = `
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        `;
+        prevBtn.addEventListener('click', () => this.previousMedia());
+        
+        // Create next button
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'carousel-nav-btn next';
+        nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+        nextBtn.style.cssText = prevBtn.style.cssText;
+        nextBtn.addEventListener('click', () => this.nextMedia());
+        
+        this.carouselControls.appendChild(prevBtn);
+        this.carouselControls.appendChild(nextBtn);
+        this.videoContainer.appendChild(this.carouselControls);
+        
+        // Create media indicators
+        this.mediaIndicators = document.createElement('div');
+        this.mediaIndicators.className = 'instagram-media-indicators';
+        this.mediaIndicators.style.cssText = `
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            gap: 4px;
+            z-index: 5;
+        `;
+        this.videoContainer.appendChild(this.mediaIndicators);
+        
+        // Create media counter display
+        this.mediaCounter = document.createElement('div');
+        this.mediaCounter.className = 'instagram-media-counter';
+        this.mediaCounter.style.cssText = `
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            display: none;
+            z-index: 5;
+        `;
+        this.videoContainer.appendChild(this.mediaCounter);
+        
+        // Add touch/swipe support for mobile
+        this.setupTouchNavigation();
+    }
+    
+    /**
+     * Set up touch/swipe navigation for Instagram carousel
+     */
+    setupTouchNavigation() {
+        let startX = null;
+        let startTime = null;
+        
+        this.videoContainer.addEventListener('touchstart', (e) => {
+            if (this.currentPlayerType === 'instagram' && this.mediaFiles.length > 1) {
+                startX = e.touches[0].clientX;
+                startTime = Date.now();
+            }
+        }, { passive: true });
+        
+        this.videoContainer.addEventListener('touchend', (e) => {
+            if (this.currentPlayerType === 'instagram' && this.mediaFiles.length > 1 && startX !== null) {
+                const endX = e.changedTouches[0].clientX;
+                const endTime = Date.now();
+                const diffX = startX - endX;
+                const diffTime = endTime - startTime;
+                
+                // Only register as swipe if it's fast enough and far enough
+                if (diffTime < 300 && Math.abs(diffX) > 50) {
+                    if (diffX > 0) {
+                        // Swiped left - go to next
+                        this.nextMedia();
+                    } else {
+                        // Swiped right - go to previous
+                        this.previousMedia();
+                    }
+                }
+                
+                startX = null;
+                startTime = null;
+            }
+        }, { passive: true });
+    }
+    
+    /**
+     * Load Instagram media (images or videos)
+     */
+    async loadInstagramMedia(videoData, dataManager) {
+        this.mediaFiles = videoData.media_files;
+        this.currentMediaIndex = 0;
+        this.currentPlayerType = 'instagram';
+        
+        // Hide YouTube iframe if present
+        if (this.youtubeIframe) {
+            this.youtubeIframe.style.display = 'none';
+        }
+        
+        // Update UI for Instagram content
+        this.updateInstagramUI();
+        
+        // Load first media item
+        await this.loadMediaAtIndex(0, dataManager);
+        
+        this.showLoading(false);
+    }
+    
+    /**
+     * Update Instagram UI elements
+     */
+    updateInstagramUI() {
+        // Update aspect ratio for Instagram content
+        if (this.videoContainer) {
+            // Remove existing Instagram classes
+            this.videoContainer.classList.remove('instagram-square', 'instagram-portrait', 'instagram-story');
+            
+            // Try to detect aspect ratio from post URL or assume square for Instagram
+            const postUrl = this.currentVideo.url || '';
+            if (postUrl.includes('/reel/') || postUrl.includes('/tv/')) {
+                // Instagram Reels are typically 9:16 (vertical)
+                this.videoContainer.style.aspectRatio = '9/16';
+                this.videoContainer.classList.add('instagram-story');
+            } else if (postUrl.includes('/p/')) {
+                // Regular Instagram posts are typically square or portrait
+                this.videoContainer.style.aspectRatio = '1/1';
+                this.videoContainer.classList.add('instagram-square');
+            } else {
+                // Default to square for Instagram content
+                this.videoContainer.style.aspectRatio = '1/1';
+                this.videoContainer.classList.add('instagram-square');
+            }
+        }
+        
+        // Show/hide carousel controls based on media count
+        if (this.mediaFiles.length > 1) {
+            this.carouselControls.style.display = 'flex';
+            this.mediaIndicators.style.display = 'flex';
+            this.mediaCounter.style.display = 'block';
+            this.createMediaIndicators();
+            this.updateMediaCounter();
+        } else {
+            this.carouselControls.style.display = 'none';
+            this.mediaIndicators.style.display = 'none';
+            this.mediaCounter.style.display = 'none';
+        }
+    }
+    
+    /**
+     * Create media indicator dots
+     */
+    createMediaIndicators() {
+        this.mediaIndicators.innerHTML = '';
+        
+        for (let i = 0; i < this.mediaFiles.length; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'media-indicator-dot';
+            dot.style.cssText = `
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.5);
+                cursor: pointer;
+                transition: all 0.2s ease;
+            `;
+            
+            if (i === this.currentMediaIndex) {
+                dot.style.background = 'rgba(255, 255, 255, 1)';
+                dot.style.transform = 'scale(1.2)';
+            }
+            
+            dot.addEventListener('click', () => this.goToMedia(i));
+            this.mediaIndicators.appendChild(dot);
+        }
+    }
+    
+    /**
+     * Load media at specific index
+     */
+    async loadMediaAtIndex(index, dataManager) {
+        const media = this.mediaFiles[index];
+        if (!media) return;
+        
+        this.currentMediaIndex = index;
+        this.updateMediaIndicators();
+        this.updateMediaCounter();
+        
+        // Construct the full path to the media
+        const mediaPath = `instadata/posts/${media.filename}`;
+        
+        if (media.type === 'image') {
+            // Show image, hide video
+            this.videoElement.style.display = 'none';
+            this.imageElement.style.display = 'block';
+            this.customControls.style.display = 'none';
+            this.hidePlayOverlay();
+            
+            // Load image with error handling
+            this.imageElement.onerror = () => {
+                console.error(`Failed to load Instagram image: ${mediaPath}`);
+                this.showError('Failed to load Instagram image');
+            };
+            
+            this.imageElement.onload = () => {
+                console.log(`📸 Loaded Instagram image: ${mediaPath}`);
+            };
+            
+            this.imageElement.src = mediaPath;
+            this.imageElement.alt = this.currentVideo.title;
+        } else if (media.type === 'video') {
+            // Show video, hide image
+            this.imageElement.style.display = 'none';
+            this.videoElement.style.display = 'block';
+            this.customControls.style.display = 'block';
+            
+            // Load video
+            try {
+                await this.loadLocalVideo(mediaPath, this.currentVideo);
+                
+                // Set thumbnail as poster if available
+                if (media.thumbnail) {
+                    const thumbnailPath = `instadata/posts/${media.thumbnail}`;
+                    this.videoElement.poster = thumbnailPath;
+                }
+            } catch (error) {
+                console.error('Failed to load Instagram video:', error);
+                this.showError('Failed to load Instagram video');
+            }
+        }
+        
+        // Update navigation buttons
+        this.updateNavigationButtons();
+    }
+    
+    /**
+     * Navigate to previous media
+     */
+    previousMedia() {
+        if (this.currentMediaIndex > 0) {
+            this.loadMediaAtIndex(this.currentMediaIndex - 1, window.app?.dataManager);
+        }
+    }
+    
+    /**
+     * Navigate to next media
+     */
+    nextMedia() {
+        if (this.currentMediaIndex < this.mediaFiles.length - 1) {
+            this.loadMediaAtIndex(this.currentMediaIndex + 1, window.app?.dataManager);
+        }
+    }
+    
+    /**
+     * Go to specific media by index
+     */
+    goToMedia(index) {
+        if (index >= 0 && index < this.mediaFiles.length) {
+            this.loadMediaAtIndex(index, window.app?.dataManager);
+        }
+    }
+    
+    /**
+     * Update media indicator dots
+     */
+    updateMediaIndicators() {
+        const dots = this.mediaIndicators.querySelectorAll('.media-indicator-dot');
+        dots.forEach((dot, i) => {
+            if (i === this.currentMediaIndex) {
+                dot.style.background = 'rgba(255, 255, 255, 1)';
+                dot.style.transform = 'scale(1.2)';
+            } else {
+                dot.style.background = 'rgba(255, 255, 255, 0.5)';
+                dot.style.transform = 'scale(1)';
+            }
+        });
+    }
+    
+    /**
+     * Update media counter display
+     */
+    updateMediaCounter() {
+        if (this.mediaCounter && this.mediaFiles.length > 1) {
+            this.mediaCounter.textContent = `${this.currentMediaIndex + 1}/${this.mediaFiles.length}`;
+        }
+    }
+    
+    /**
+     * Update navigation button states
+     */
+    updateNavigationButtons() {
+        const prevBtn = this.carouselControls.querySelector('.prev');
+        const nextBtn = this.carouselControls.querySelector('.next');
+        
+        if (prevBtn) {
+            prevBtn.style.opacity = this.currentMediaIndex === 0 ? '0.5' : '1';
+            prevBtn.disabled = this.currentMediaIndex === 0;
+        }
+        
+        if (nextBtn) {
+            nextBtn.style.opacity = this.currentMediaIndex === this.mediaFiles.length - 1 ? '0.5' : '1';
+            nextBtn.disabled = this.currentMediaIndex === this.mediaFiles.length - 1;
+        }
+    }
+    
+    /**
+     * Reset media state
+     */
+    resetMedia() {
+        this.currentMediaIndex = 0;
+        this.mediaFiles = [];
+        
+        // Hide Instagram elements
+        if (this.imageElement) {
+            this.imageElement.style.display = 'none';
+            this.imageElement.src = '';
+        }
+        
+        if (this.carouselControls) {
+            this.carouselControls.style.display = 'none';
+        }
+        
+        if (this.mediaIndicators) {
+            this.mediaIndicators.style.display = 'none';
+            this.mediaIndicators.innerHTML = '';
+        }
+        
+        if (this.mediaCounter) {
+            this.mediaCounter.style.display = 'none';
+        }
+        
+        // Reset aspect ratio to default and remove Instagram classes
+        if (this.videoContainer) {
+            this.videoContainer.style.aspectRatio = '16/9';
+            this.videoContainer.classList.remove('instagram-square', 'instagram-portrait', 'instagram-story');
+        }
+    }
+    
+    /**
      * Clean up resources
      */
     destroy() {
@@ -805,6 +1221,7 @@ class VideoPlayer {
         this.videoElement.src = '';
         this.videoElement.load();
         this.currentVideo = null;
+        this.resetMedia();
     }
 
     /**

@@ -1,6 +1,6 @@
 /**
- * VideoGrid Component - Handles video grid rendering and interactions
- * This component can be extended for more advanced grid features
+ * VideoGrid Component - Handles video/post grid rendering and interactions
+ * This component supports both YouTube videos and Instagram posts
  */
 class VideoGridComponent {
     constructor(container, dataManager) {
@@ -18,9 +18,16 @@ class VideoGridComponent {
     setupEventHandlers() {
         this.container.addEventListener('click', (e) => {
             const videoCard = e.target.closest('.video-card');
-            if (videoCard && !this.isLoading) {
-                const videoId = videoCard.dataset.videoId;
-                this.onVideoClick?.(videoId);
+            const instagramGridItem = e.target.closest('.instagram-grid-item');
+            
+            if (!this.isLoading) {
+                if (videoCard) {
+                    const videoId = videoCard.dataset.videoId;
+                    this.onVideoClick?.(videoId);
+                } else if (instagramGridItem) {
+                    const videoId = instagramGridItem.dataset.videoId;
+                    this.onVideoClick?.(videoId);
+                }
             }
         });
 
@@ -33,7 +40,7 @@ class VideoGridComponent {
      */
     setupLazyLoading() {
         if ('IntersectionObserver' in window) {
-            const imageObserver = new IntersectionObserver((entries, observer) => {
+            this.imageObserver = new IntersectionObserver((entries, observer) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         const img = entry.target;
@@ -42,13 +49,6 @@ class VideoGridComponent {
                         observer.unobserve(img);
                     }
                 });
-            });
-
-            // Observe all lazy images
-            this.container.addEventListener('DOMNodeInserted', (e) => {
-                if (e.target.classList?.contains('lazy')) {
-                    imageObserver.observe(e.target);
-                }
             });
         }
     }
@@ -63,47 +63,102 @@ class VideoGridComponent {
         const html = videos.map(video => this.createVideoCard(video)).join('');
         this.container.innerHTML = html;
 
-        // Setup lazy loading for new images
-        this.container.querySelectorAll('img[data-src]').forEach(img => {
-            if ('IntersectionObserver' in window) {
-                // Will be handled by observer
-            } else {
-                // Fallback for older browsers
-                img.src = img.dataset.src;
-            }
-        });
+        // Images are now loaded directly, no lazy loading setup needed
 
         this.isLoading = false;
     }
 
     /**
-     * Create video card HTML
+     * Create Instagram-style grid item HTML
      */
     createVideoCard(video) {
-        const thumbnail = `https://img.youtube.com/vi/${video.video_id}/maxresdefault.jpg`;
-        const date = new Date(video.published_at).toLocaleDateString();
-        const views = this.formatNumber(video.view_count);
+        let thumbnail;
+        let mediaType = 'image';
+        let hasMultipleMedia = false;
+        
+        // Handle Instagram posts
+        if (video.media_files && video.media_files.length > 0) {
+            const firstMedia = video.media_files[0];
+            hasMultipleMedia = video.media_files.length > 1;
+            
+            if (firstMedia.type === 'video' && firstMedia.thumbnail) {
+                thumbnail = `instadata/posts/${firstMedia.thumbnail}`;
+                mediaType = 'video';
+            } else {
+                thumbnail = `instadata/posts/${firstMedia.filename}`;
+            }
+            
+            console.log(`Creating card for ${video.video_id}: ${thumbnail}, media type: ${mediaType}`);
+            
+            // Test if we can load the image
+            const testImg = new Image();
+            testImg.onload = () => console.log(`✅ Successfully loaded: ${thumbnail}`);
+            testImg.onerror = () => console.error(`❌ Failed to load: ${thumbnail}`);
+            testImg.src = thumbnail;
+        } else {
+            // Fallback to YouTube thumbnail
+            thumbnail = `https://img.youtube.com/vi/${video.video_id}/maxresdefault.jpg`;
+            console.log(`Fallback thumbnail for ${video.video_id}: ${thumbnail}`);
+        }
+        
+        const likes = this.formatNumber(video.like_count || video.view_count);
         const comments = this.formatNumber(video.comment_count);
         
+        // Format date for overlay
+        const date = new Date(video.published_at);
+        const now = new Date();
+        const diffTime = Math.abs(now - date);
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        let dateText;
+        if (diffDays < 1) {
+            dateText = 'Today';
+        } else if (diffDays < 7) {
+            dateText = `${diffDays}d ago`;
+        } else if (diffDays < 30) {
+            dateText = `${Math.floor(diffDays / 7)}w ago`;
+        } else if (diffDays < 365) {
+            dateText = `${Math.floor(diffDays / 30)}mo ago`;
+        } else {
+            dateText = `${Math.floor(diffDays / 365)}y ago`;
+        }
+        
         return `
-            <div class="col-md-6 col-lg-4 col-xl-3">
-                <div class="card video-card" data-video-id="${video.video_id}">
-                    <div class="video-thumbnail">
-                        <img class="card-img-top lazy" 
-                             data-src="${thumbnail}" 
+            <div class="col-3 p-1">
+                <div class="instagram-grid-item position-relative" data-video-id="${video.video_id}">
+                    <div class="instagram-thumbnail">
+                        <img class="w-100 h-100" 
+                             src="${thumbnail}" 
                              alt="${this.escapeHTML(video.title)}" 
                              loading="lazy"
-                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='180'%3E%3Crect width='100%25' height='100%25' fill='%23f0f0f0'/%3E%3C/svg%3E">
+                             style="object-fit: cover;"
+                             onerror="this.style.background='#f0f0f0'; this.style.display='block'; console.error('Failed to load image:', this.src); this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjRjBGMEYwIi8+CjxwYXRoIGQ9Ik0xNTAgMTIwQzEzNi4xOTMgMTIwIDEyNSAxMzEuMTkzIDEyNSAxNDVDMTI1IDE1OC44MDcgMTM2LjE5MyAxNzAgMTUwIDE3MEMxNjMuODA3IDE3MCAxNzUgMTU4LjgwNyAxNzUgMTQ1QzE3NSAxMzEuMTkzIDE2My44MDcgMTIwIDE1MCAxMjBaIiBmaWxsPSIjQzBDMEMwIi8+CjxwYXRoIGQ9Ik0xMDAgMjAwSDE4MFYxODBIMTAwVjIwMFoiIGZpbGw9IiNDMEMwQzAiLz4KPC9zdmc+'">
                     </div>
-                    <div class="video-card-body card-body">
-                        <h6 class="video-title" title="${this.escapeHTML(video.title)}">
-                            ${this.escapeHTML(video.title)}
-                        </h6>
-                        <div class="video-stats">
-                            <small class="text-muted">${views} views • ${comments} comments</small>
-                        </div>
-                        <div class="video-date">
-                            <small class="text-muted">${date}</small>
+                    
+                    <!-- Multiple media indicator (top-right) -->
+                    <div class="media-indicators position-absolute" style="top: 8px; right: 8px;">
+                        ${hasMultipleMedia ? '<i class="fas fa-clone text-white"></i>' : ''}
+                    </div>
+                    
+                    <!-- Hover overlay with stats -->
+                    <div class="hover-overlay position-absolute w-100 h-100 d-flex align-items-center justify-content-center">
+                        <div class="text-white text-center">
+                            <div class="mb-2">
+                                <i class="${mediaType === 'video' ? 'fas fa-play' : 'fas fa-eye'} me-1"></i>
+                                <span>${mediaType === 'video' ? 'Video' : 'Photo'}</span>
+                            </div>
+                            <div class="mb-2">
+                                <i class="fas fa-calendar-alt me-1"></i>
+                                <span>${dateText}</span>
+                            </div>
+                            <div class="mb-1">
+                                <i class="fas fa-heart me-1"></i>
+                                <span>${likes}</span>
+                            </div>
+                            <div>
+                                <i class="fas fa-comment me-1"></i>
+                                <span>${comments}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -116,14 +171,10 @@ class VideoGridComponent {
      */
     renderSkeleton(count = 12) {
         const skeletonCards = Array(count).fill(0).map(() => `
-            <div class="col-md-6 col-lg-4 col-xl-3">
-                <div class="card video-card skeleton">
-                    <div class="video-thumbnail skeleton">
-                        <div class="card-img-top" style="height: 180px; background: #f0f0f0;"></div>
-                    </div>
-                    <div class="video-card-body card-body">
-                        <div class="skeleton" style="height: 1rem; margin-bottom: 0.5rem; background: #e0e0e0;"></div>
-                        <div class="skeleton" style="height: 0.8rem; width: 60%; background: #e0e0e0;"></div>
+            <div class="col-3 p-1">
+                <div class="instagram-grid-item skeleton">
+                    <div class="instagram-thumbnail" style="background: #f0f0f0;">
+                        <div class="w-100 h-100"></div>
                     </div>
                 </div>
             </div>

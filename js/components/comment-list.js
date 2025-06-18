@@ -90,49 +90,82 @@ class CommentListComponent {
     createSingleComment(comment, isReply = false) {
         const avatarColor = this.generateAvatarColor(comment.author);
         const firstLetter = comment.author[1]?.toUpperCase() || comment.author[0]?.toUpperCase() || 'U';
-        const date = new Date(comment.published_at).toLocaleDateString();
-        const likes = this.formatNumber(comment.like_count);
+        const date = new Date(comment.published_at || comment.commentAt).toLocaleDateString();
+        const likes = this.formatNumber(comment.like_count || comment.reactionsCount);
         const heartIcon = comment.channel_owner_liked ? '❤️' : '';
         
         const cardClass = isReply ? 'reply-card comment-card' : 'comment-card';
         const avatarSize = isReply ? '28' : '32';
         const avatarFontSize = isReply ? '0.8rem' : '1rem';
         
+        // Use local avatar for medicalmedium, Instagram profile picture for others, otherwise fallback to colored initial
+        const avatarUrl = comment.author === 'medicalmedium' ? 'MMCommentExplorer.webp' : comment.avatar;
+        const avatarElement = avatarUrl ? `
+            <img src="${avatarUrl}" 
+                 alt="${this.escapeHTML(comment.author)}" 
+                 style="
+                     width: ${avatarSize}px; 
+                     height: ${avatarSize}px; 
+                     border-radius: 50%; 
+                     object-fit: cover;
+                     border: 1px solid #ddd;
+                 "
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div style="
+                background-color: ${avatarColor}; 
+                width: ${avatarSize}px; 
+                height: ${avatarSize}px; 
+                border-radius: 50%; 
+                display: none; 
+                align-items: center; 
+                justify-content: center; 
+                color: white; 
+                font-weight: 500;
+                font-size: ${avatarFontSize};
+            ">
+                ${firstLetter}
+            </div>
+        ` : `
+            <div style="
+                background-color: ${avatarColor}; 
+                width: ${avatarSize}px; 
+                height: ${avatarSize}px; 
+                border-radius: 50%; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                color: white; 
+                font-weight: 500;
+                font-size: ${avatarFontSize};
+            ">
+                ${firstLetter}
+            </div>
+        `;
+        
         return `
             <div class="${cardClass}">
-                <div class="comment-header">
-                    <div class="d-flex align-items-center">
-                        <div class="avatar me-3" style="
-                            background-color: ${avatarColor}; 
-                            width: ${avatarSize}px; 
-                            height: ${avatarSize}px; 
-                            border-radius: 50%; 
-                            display: flex; 
-                            align-items: center; 
-                            justify-content: center; 
-                            color: white; 
-                            font-weight: 500;
-                            font-size: ${avatarFontSize};
-                        ">
-                            ${firstLetter}
-                        </div>
-                        <div>
-                            <div class="comment-author">${this.escapeHTML(comment.author)}</div>
-                            <div class="comment-date">${date}</div>
-                        </div>
+                <div class="profile-avatar">
+                    ${avatarElement}
+                </div>
+                <div class="comment-content">
+                    <div class="comment-header">
+                        <span class="comment-author">${this.escapeHTML(comment.author)}</span>
+                        <span class="comment-text">${this.highlightText(this.escapeHTML(comment.text || comment.content))}</span>
                     </div>
+                    <div class="comment-actions">
+                        <span class="comment-date">${date}</span>
+                        <span class="comment-likes">${likes} likes</span>
+                        <span class="comment-reply">Reply</span>
+                        ${heartIcon ? `<span class="channel-owner-liked">${heartIcon}</span>` : ''}
+                    </div>
+                </div>
+                <div class="comment-export" style="position: absolute; top: 12px; right: 16px; opacity: 0; transition: opacity 0.2s;">
                     <button class="btn btn-outline-primary btn-sm export-btn" 
                             data-comment-id="${comment.comment_id}"
-                            title="Export this comment as PNG">
+                            title="Export this comment as PNG"
+                            style="font-size: 10px; padding: 2px 6px;">
                         <i class="bi bi-download"></i>
                     </button>
-                </div>
-                <div class="comment-text">${this.highlightText(this.escapeHTML(comment.text))}</div>
-                <div class="comment-actions">
-                    <div class="comment-likes">
-                        <i class="bi bi-hand-thumbs-up"></i> ${likes}
-                        ${heartIcon ? `<span class="channel-owner-liked ms-2">${heartIcon}</span>` : ''}
-                    </div>
                 </div>
             </div>
         `;
