@@ -1126,24 +1126,24 @@ body {
 .mini-word-cloud .mini-word-item {
     position: relative;
     z-index: 2;
-    padding: 8px 16px;
-    border-radius: 20px;
-    background: var(--instagram-gradient);
-    color: white;
-    font-weight: 500;
-    font-size: 0.85rem;
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: #f1f3f4;
+    color: #5f6368;
+    font-weight: 400;
+    font-size: 0.75rem;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid #e8eaed;
     display: inline-flex;
     align-items: center;
     white-space: nowrap;
 }
 
 .mini-word-cloud .mini-word-item:hover {
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    background: var(--instagram-gradient-hover);
+    background: #e8eaed;
+    color: #3c4043;
+    transform: translateY(-1px);
 }
 
 /* All mini word cloud items have the same size - no size classes needed */
@@ -1221,30 +1221,57 @@ body {
 }
 
 .mini-word-cloud .mini-word-item .count {
-    background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(4px);
-    padding: 2px 6px;
-    border-radius: 10px;
-    font-size: 0.7em;
-    margin-left: 6px;
-    font-weight: 600;
+    background: rgba(95, 99, 104, 0.1);
+    padding: 1px 4px;
+    border-radius: 6px;
+    font-size: 0.65em;
+    margin-left: 4px;
+    font-weight: 500;
+    color: #5f6368;
 }
 
 /* Responsive adjustments for mini word cloud */
 @media (max-width: 768px) {
     .mini-word-cloud {
-        gap: 6px;
+        gap: 4px;
     }
     
     .mini-word-cloud .mini-word-item {
-        padding: 6px 12px;
-        font-size: 0.75rem;
+        padding: 3px 6px;
+        font-size: 0.7rem;
     }
     
     .mini-word-cloud .mini-word-item .count {
         font-size: 0.6em;
-        padding: 1px 4px;
+        padding: 1px 3px;
+        margin-left: 3px;
     }
+}
+
+/* List View Export Button Styling */
+.export-post-btn {
+    background: white !important;
+    border: 2px solid #1a73e8 !important;
+    border-radius: 20px !important;
+    color: #1a73e8 !important;
+    font-weight: 500 !important;
+    padding: 4px 12px !important;
+    font-size: 12px !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 2px 4px rgba(26, 115, 232, 0.1) !important;
+}
+
+.export-post-btn:hover {
+    background: #f8f9ff !important;
+    border-color: #1557b0 !important;
+    color: #1557b0 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(26, 115, 232, 0.15) !important;
+}
+
+.export-post-btn:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1) !important;
 }
 
 /* Analytics Modal Styles */
@@ -2544,31 +2571,31 @@ body {
 }
 
 .comment-export .export-btn {
-    background: #56c772 !important; /* Custom green */
-    border: none !important;
+    background: white !important;
+    border: 2px solid #1a73e8 !important;
     border-radius: 50% !important;
-    width: 24px !important;
-    height: 24px !important;
+    width: 28px !important;
+    height: 28px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     cursor: pointer !important;
-    color: white !important;
-    font-size: 11px !important;
-    font-weight: 900 !important; /* Bold icon */
+    color: #1a73e8 !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
     transition: all 0.2s ease !important;
     padding: 0 !important;
+    box-shadow: 0 2px 4px rgba(26, 115, 232, 0.1) !important;
 }
 
 .comment-export .export-btn:hover {
-    background: #4ab963 !important;
+    background: #f8f9ff !important;
+    border-color: #1557b0 !important;
+    color: #1557b0 !important;
     transform: scale(1.05) !important;
+    box-shadow: 0 4px 8px rgba(26, 115, 232, 0.15) !important;
 }
 
-.comment-export .export-btn:hover {
-    color: #0056b3 !important;
-    text-decoration: underline !important;
-}
 
 .comment-export .export-btn:focus {
     outline: none !important;
