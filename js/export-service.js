@@ -165,7 +165,7 @@ class ExportService {
     /**
      * Export comments for a specific video using fflate
      */
-    async exportVideoComments(videoId, dataManager, progressCallback) {
+    async exportVideoComments(videoId, dataManager, progressCallback, format = 'comment-only') {
         if (this.isExporting) {
             throw new Error('Export already in progress');
         }
@@ -205,7 +205,8 @@ class ExportService {
                     this.exportProgress.current = progress.completed || 0;
                     this.exportProgress.status = progress.status;
                     progressCallback?.(this.exportProgress);
-                }
+                },
+                format
             );
 
             this.exportProgress.current = this.exportProgress.total;
@@ -222,7 +223,7 @@ class ExportService {
     /**
      * Export comments for all videos using fflate
      */
-    async exportAllVideos(dataManager, progressCallback) {
+    async exportAllVideos(dataManager, progressCallback, format = 'comment-only') {
         if (this.isExporting) {
             throw new Error('Export already in progress');
         }
@@ -288,7 +289,8 @@ class ExportService {
                             this.exportProgress.currentVideoComments = batchProgress.completed || 0;
                             this.exportProgress.status = `Video ${videoIndex + 1}/${videos.length}: ${batchProgress.status}`;
                             progressCallback?.(this.exportProgress);
-                        }
+                        },
+                        format
                     );
 
                     zipFiles.push(...videoZipFiles);
@@ -315,7 +317,7 @@ class ExportService {
     /**
      * Generate ZIP files using fflate - MUCH more reliable than JSZip
      */
-    async generateFflateZIPs(comments, videoTitle, batchSize = 500, progressCallback) {
+    async generateFflateZIPs(comments, videoTitle, batchSize = 500, progressCallback, format = 'comment-only') {
         const zipFiles = [];
         const totalBatches = Math.ceil(comments.length / batchSize);
         
@@ -357,17 +359,36 @@ class ExportService {
                     progressCallback?.(this.exportProgress);
 
                     try {
-                        const html = this.generateCommentHTML(comment, videoTitle);
-                        const filename = this.generateFileName(videoTitle, comment.author, comment.text);
+                        let pngBlob;
+                        let filename;
                         
-                        // Generate PNG using iframe (no screen interference)
-                        const pngBlob = await this.generatePNGBlobIframe(html);
+                        // Handle different export formats
+                        switch (format) {
+                            case 'comment-only':
+                                const html = this.generateCommentHTML(comment, videoTitle);
+                                filename = this.generateFileName(videoTitle, comment.author, comment.text);
+                                pngBlob = await this.generatePNGBlobIframe(html);
+                                break;
+                                
+                            case 'iphone-dark':
+                            case 'iphone-light':
+                                console.log(`📱 Generating iPhone composite for format: ${format}`);
+                                filename = this.generateiPhoneFileName(videoTitle, comment.author, comment.text, format);
+                                pngBlob = await this.generateiPhoneComposite(comment, format, videoTitle);
+                                break;
+                                
+                            default:
+                                console.warn(`⚠️ Unknown format: ${format}, falling back to comment-only`);
+                                const htmlFallback = this.generateCommentHTML(comment, videoTitle);
+                                filename = this.generateFileName(videoTitle, comment.author, comment.text);
+                                pngBlob = await this.generatePNGBlobIframe(htmlFallback);
+                        }
                         
                         if (pngBlob && pngBlob.size > 0) {
                             // Convert blob to Uint8Array for fflate
                             const arrayBuffer = await pngBlob.arrayBuffer();
                             imageFiles[`${filename}.png`] = new Uint8Array(arrayBuffer);
-                            console.log(`✅ Generated image ${i + 1}/${batchComments.length}: ${filename}.png (${(pngBlob.size / 1024).toFixed(1)}KB)`);
+                            console.log(`✅ Generated ${format} image ${i + 1}/${batchComments.length}: ${filename}.png (${(pngBlob.size / 1024).toFixed(1)}KB)`);
                         } else {
                             console.warn(`⚠️ Invalid PNG blob for comment ${comment.comment_id}, skipping`);
                         }
@@ -877,9 +898,16 @@ class ExportService {
             
             // 3. Load and draw the iPhone UI overlay
             const overlayPath = isDark ? 'assets/blankdarkmode.png' : 'assets/blanklightmode.png';
-            console.log(`📱 Loading iPhone template: ${overlayPath}`);
-            const overlay = await this.loadImage(overlayPath);
-            ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
+            console.log(`📱 Loading iPhone template: ${overlayPath} (format: ${format}, isDark: ${isDark})`);
+            
+            try {
+                const overlay = await this.loadImage(overlayPath);
+                console.log(`✅ Successfully loaded iPhone template: ${overlayPath}`);
+                ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
+            } catch (error) {
+                console.error(`❌ Failed to load iPhone template: ${overlayPath}`, error);
+                throw new Error(`Failed to load iPhone template: ${error.message}`);
+            }
             
             // 3. Draw the comment at 40% height  
             const commentY = canvas.height * 0.4;
