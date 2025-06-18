@@ -906,7 +906,10 @@ class ExportService {
                 ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
             } catch (error) {
                 console.error(`❌ Failed to load iPhone template: ${overlayPath}`, error);
-                throw new Error(`Failed to load iPhone template: ${error.message}`);
+                console.log(`🔄 Creating fallback iPhone frame...`);
+                
+                // Create a basic iPhone frame as fallback
+                this.drawFallbackiPhoneFrame(ctx, isDark);
             }
             
             // 3. Draw the comment at 40% height  
@@ -972,10 +975,71 @@ class ExportService {
     loadImage(src) {
         return new Promise((resolve, reject) => {
             const img = new Image();
-            img.onload = () => resolve(img);
-            img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+            img.onload = () => {
+                console.log(`✅ Successfully loaded image: ${src}`);
+                resolve(img);
+            };
+            img.onerror = () => {
+                console.error(`❌ Failed to load image: ${src}`);
+                console.log(`🔍 Current URL: ${window.location.href}`);
+                console.log(`🔍 Attempting to load from: ${new URL(src, window.location.href).href}`);
+                reject(new Error(`Failed to load image: ${src}`));
+            };
             img.src = src;
         });
+    }
+
+    /**
+     * Draw a fallback iPhone frame when template images fail to load
+     */
+    drawFallbackiPhoneFrame(ctx, isDark) {
+        const canvas = ctx.canvas;
+        
+        // Basic iPhone-style frame
+        const bgColor = isDark ? '#000000' : '#ffffff';
+        const statusBarColor = isDark ? '#000000' : '#ffffff';
+        const headerColor = isDark ? '#1c1c1e' : '#f8f8f8';
+        const textColor = isDark ? '#ffffff' : '#000000';
+        
+        // Fill background
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Status bar (top 88px)
+        ctx.fillStyle = statusBarColor;
+        ctx.fillRect(0, 0, canvas.width, 88);
+        
+        // Status bar elements
+        ctx.fillStyle = textColor;
+        ctx.font = '24px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillText('9:41', 60, 50);
+        ctx.fillText('100%', canvas.width - 100, 50);
+        
+        // Instagram header (88px to 186px)
+        ctx.fillStyle = headerColor;
+        ctx.fillRect(0, 88, canvas.width, 98);
+        
+        // Instagram logo area
+        ctx.fillStyle = textColor;
+        ctx.font = 'bold 32px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillText('Instagram', 60, 140);
+        
+        // Post header (186px to 306px)
+        ctx.fillStyle = headerColor;
+        ctx.fillRect(0, 186, canvas.width, 120);
+        
+        // Username and dots
+        ctx.fillStyle = textColor;
+        ctx.font = '28px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillText('@medicalmedium', 60, 230);
+        ctx.fillText('•••', canvas.width - 80, 230);
+        
+        // Bottom area for engagement buttons (below post)
+        const bottomY = 306 + 1179; // After the square post area
+        ctx.fillStyle = headerColor;
+        ctx.fillRect(0, bottomY, canvas.width, canvas.height - bottomY);
+        
+        console.log('✅ Created fallback iPhone frame');
     }
     
     /**
