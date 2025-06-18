@@ -8,6 +8,11 @@
     --dark-color: #343a40;
     --light-color: #f8f9fa;
     --medical-gold: #FFD700;
+    
+    /* Instagram-style gradients */
+    --instagram-gradient: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+    --instagram-gradient-light: linear-gradient(45deg, #f5a623 0%, #f7931e 25%, #fb6c4d 50%, #e85a97 75%, #d13adf 100%);
+    --instagram-gradient-hover: linear-gradient(45deg, #e8832e 0%, #d65d37 25%, #c7223d 50%, #b71e5e 75%, #a71680 100%);
 }
 
 /* View Toggle Styles */
@@ -870,7 +875,7 @@ body {
 }
 
 .insights-tabs .btn.active {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--instagram-gradient);
     color: white;
     border-color: transparent;
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
@@ -917,7 +922,7 @@ body {
     z-index: 2;
     padding: 8px 16px;
     border-radius: 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--instagram-gradient);
     color: white;
     font-weight: 500;
     font-size: 0.85rem;
@@ -930,33 +935,33 @@ body {
 .word-item:hover {
     transform: translateY(-2px) scale(1.05);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-    background: linear-gradient(135deg, #5a67d8 0%, #667eea 100%);
+    background: var(--instagram-gradient-hover);
 }
 
 .word-item.size-1 { 
     font-size: 0.7rem; 
     padding: 6px 12px;
-    background: linear-gradient(135deg, #a8b3f0 0%, #b4a7d6 100%);
+    background: var(--instagram-gradient-light);
 }
 .word-item.size-2 { 
     font-size: 0.8rem; 
     padding: 7px 14px;
-    background: linear-gradient(135deg, #8b9bf5 0%, #9d92d1 100%);
+    background: var(--instagram-gradient-light);
 }
 .word-item.size-3 { 
     font-size: 0.9rem; 
     padding: 8px 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--instagram-gradient);
 }
 .word-item.size-4 { 
     font-size: 1rem; 
     padding: 10px 18px;
-    background: linear-gradient(135deg, #5a67d8 0%, #6b46a3 100%);
+    background: var(--instagram-gradient-hover);
 }
 .word-item.size-5 { 
     font-size: 1.1rem; 
     padding: 12px 20px;
-    background: linear-gradient(135deg, #4c51bf 0%, #553c9a 100%);
+    background: var(--instagram-gradient-hover);
     font-weight: 600;
 }
 
@@ -1064,7 +1069,7 @@ body {
 }
 
 .compact-comment-insights .insights-tabs .btn.active {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--instagram-gradient);
     color: white;
     border-color: transparent;
     box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2);
@@ -1072,7 +1077,7 @@ body {
 
 /* Purple Button Style */
 .btn-purple {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--instagram-gradient);
     color: white;
     border: none;
     font-weight: 500;
@@ -1081,10 +1086,10 @@ body {
 }
 
 .btn-purple:hover {
-    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    background: var(--instagram-gradient-hover);
     color: white;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 12px rgba(220, 39, 67, 0.3);
 }
 
 /* Remove scrollbar from comments section */
@@ -1124,7 +1129,7 @@ body {
     z-index: 2;
     padding: 8px 16px;
     border-radius: 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--instagram-gradient);
     color: white;
     font-weight: 500;
     font-size: 0.85rem;
@@ -1139,7 +1144,7 @@ body {
 
 .mini-word-cloud .mini-word-item:hover {
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    background: linear-gradient(135deg, #5a67d8 0%, #667eea 100%);
+    background: var(--instagram-gradient-hover);
 }
 
 /* All mini word cloud items have the same size - no size classes needed */
@@ -1164,7 +1169,7 @@ body {
     border-radius: 8px;
     padding: 15px;
     margin-bottom: 10px;
-    border-left: 4px solid #667eea;
+    border-left: 4px solid #dc2743;
 }
 
 .faq-question {
@@ -1193,7 +1198,7 @@ body {
 
 .comment-author {
     font-weight: 600;
-    color: #667eea;
+    color: #dc2743;
     margin-bottom: 5px;
 }
 
@@ -1215,7 +1220,7 @@ body {
 }
 
 .idea-type {
-    background: #667eea;
+    background: #dc2743;
     color: white;
     padding: 2px 8px;
     border-radius: 12px;
@@ -1277,9 +1282,14 @@ body {
 }
 
 .analytics-tab.active {
-    color: #667eea;
-    border-bottom-color: #667eea;
-    background: #f8f9fa;
+    background: var(--instagram-gradient);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    border-bottom: 3px solid;
+    border-image: var(--instagram-gradient) 1;
+    background-color: #f8f9fa;
 }
 
 .analytics-tab i {
@@ -1343,7 +1353,7 @@ body {
     z-index: 2;
     padding: 8px 16px;
     border-radius: 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--instagram-gradient);
     color: white;
     font-weight: 500;
     font-size: 0.85rem;
@@ -1357,33 +1367,33 @@ body {
 .analytics-word-item:hover {
     transform: translateY(-2px) scale(1.05);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-    background: linear-gradient(135deg, #5a67d8 0%, #667eea 100%);
+    background: var(--instagram-gradient-hover);
 }
 
 .analytics-word-item.size-1 { 
     font-size: 0.7rem; 
     padding: 6px 12px;
-    background: linear-gradient(135deg, #a8b3f0 0%, #b4a7d6 100%);
+    background: var(--instagram-gradient-light);
 }
 .analytics-word-item.size-2 { 
     font-size: 0.8rem; 
     padding: 7px 14px;
-    background: linear-gradient(135deg, #8b9bf5 0%, #9d92d1 100%);
+    background: var(--instagram-gradient-light);
 }
 .analytics-word-item.size-3 { 
     font-size: 0.9rem; 
     padding: 8px 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--instagram-gradient);
 }
 .analytics-word-item.size-4 { 
     font-size: 1rem; 
     padding: 10px 18px;
-    background: linear-gradient(135deg, #5a67d8 0%, #6b46a3 100%);
+    background: var(--instagram-gradient-hover);
 }
 .analytics-word-item.size-5 { 
     font-size: 1.1rem; 
     padding: 12px 20px;
-    background: linear-gradient(135deg, #4c51bf 0%, #553c9a 100%);
+    background: var(--instagram-gradient-hover);
     font-weight: 600;
 }
 
@@ -1443,7 +1453,7 @@ body {
 .sentiment-percentage {
     font-size: 14px;
     font-weight: 700;
-    color: #667eea;
+    color: #dc2743;
 }
 
 /* Themes Analysis */
@@ -1473,7 +1483,7 @@ body {
 }
 
 .theme-count {
-    background: #667eea;
+    background: #dc2743;
     color: white;
     padding: 2px 6px;
     border-radius: 10px;
@@ -1523,7 +1533,7 @@ body {
 }
 
 .modal-word-cloud .word-item {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--instagram-gradient);
     color: white;
 }
 
@@ -1575,7 +1585,7 @@ body {
 
 .top-comments-section .comment-item {
     background: #f8f9fa;
-    border-left: 4px solid #667eea;
+    border-left: 4px solid #dc2743;
     padding: 16px;
     margin-bottom: 12px;
     border-radius: 0 8px 8px 0;
@@ -1603,7 +1613,7 @@ body {
 }
 
 .video-ideas-section .idea-card:hover {
-    border-color: #667eea;
+    border-color: #dc2743;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
@@ -1648,7 +1658,7 @@ body {
 .compact-word-cloud .word-item {
     padding: 4px 8px;
     border-radius: 12px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--instagram-gradient);
     color: white;
     font-weight: 500;
     font-size: 0.7rem;
