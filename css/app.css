@@ -1296,8 +1296,8 @@ body {
     display: none;
     padding: 15px;
     min-height: 120px;
-    max-height: 300px;
-    overflow-y: auto;
+    max-height: none;
+    overflow-y: visible;
 }
 
 .tab-pane.active {
