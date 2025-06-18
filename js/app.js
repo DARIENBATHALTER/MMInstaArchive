@@ -519,6 +519,9 @@ class ArchiveExplorer {
             const element = document.getElementById(id);
             if (element) {
                 this.elements[key] = element;
+                if (key === 'exportSinglePostComments' || key === 'exportAllPostsComments') {
+                    console.log(`✅ Found export button: ${id}`, element);
+                }
             } else {
                 console.warn(`⚠️ Optional element not found: ${id}`);
                 this.elements[key] = null;
@@ -643,13 +646,15 @@ class ArchiveExplorer {
                 });
             }
 
-            // Export single post comments with menu
-            if (this.elements.exportSinglePostComments) {
-                this.elements.exportSinglePostComments.addEventListener('click', (e) => {
+            // Export single post comments with menu (using delegation)
+            document.addEventListener('click', (e) => {
+                if (e.target.matches('#exportSinglePostComments') || e.target.closest('#exportSinglePostComments')) {
                     e.preventDefault();
-                    this.showExportAllMenu(this.elements.exportSinglePostComments, 'single-video');
-                });
-            }
+                    console.log('🔥 Export single post comments clicked via delegation!');
+                    const button = e.target.closest('#exportSinglePostComments') || e.target;
+                    this.showExportAllMenu(button, 'single-video');
+                }
+            });
             
             // Post Analytics toggle is set up in setupAnalyticsToggle() method
             this.setupAnalyticsToggle();
@@ -657,13 +662,15 @@ class ArchiveExplorer {
             // Analytics tab switching
             this.setupAnalyticsTabs();
 
-            // Export all posts comments with menu
-            if (this.elements.exportAllPostsComments) {
-                this.elements.exportAllPostsComments.addEventListener('click', (e) => {
+            // Export all posts comments with menu (using delegation)
+            document.addEventListener('click', (e) => {
+                if (e.target.matches('#exportAllPostsComments') || e.target.closest('#exportAllPostsComments')) {
                     e.preventDefault();
-                    this.showExportAllMenu(this.elements.exportAllPostsComments, 'all-videos');
-                });
-            }
+                    console.log('🔥 Export all posts comments clicked via delegation!');
+                    const button = e.target.closest('#exportAllPostsComments') || e.target;
+                    this.showExportAllMenu(button, 'all-videos');
+                }
+            });
             
             // List view export buttons (delegated event listener)
             document.addEventListener('click', (e) => {
