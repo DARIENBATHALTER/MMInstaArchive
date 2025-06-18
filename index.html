@@ -190,7 +190,23 @@
     <div id="app" class="container-fluid" style="display: none;">
         
         <!-- Stats Bar -->
-        <div id="statsBarContainer" class="d-flex justify-content-end align-items-center mb-3">
+        <div id="statsBarContainer" class="d-flex justify-content-between align-items-center mb-3">
+            <!-- View Toggle -->
+            <div class="view-toggle">
+                <div class="btn-group" role="group" aria-label="View toggle">
+                    <input type="radio" class="btn-check" name="viewToggle" id="gridViewToggle" checked>
+                    <label class="btn btn-outline-primary" for="gridViewToggle">
+                        <i class="bi bi-grid-3x3-gap me-1"></i>Grid View
+                    </label>
+                    
+                    <input type="radio" class="btn-check" name="viewToggle" id="listViewToggle">
+                    <label class="btn btn-outline-primary" for="listViewToggle">
+                        <i class="bi bi-list-ul me-1"></i>List View
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Stats -->
             <div id="statsBar" class="stats-bar mb-0">
                 <span id="resultCount" class="badge bg-primary">0 posts</span>
                 <span id="totalComments" class="badge bg-secondary">0 comments</span>
@@ -209,6 +225,35 @@
             <!-- Pagination -->
             <nav aria-label="Post pagination" class="mt-4">
                 <ul id="videoPagination" class="pagination justify-content-center">
+                    <!-- Pagination will be generated here -->
+                </ul>
+            </nav>
+        </div>
+
+        <!-- Post List View -->
+        <div id="videoListView" class="view-container" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-hover" id="videoListTable">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th scope="col" class="post-thumbnail-col">Post</th>
+                            <th scope="col" class="post-title-col">Title</th>
+                            <th scope="col" class="text-center">Date</th>
+                            <th scope="col" class="text-center">Likes</th>
+                            <th scope="col" class="text-center">Comments</th>
+                            <th scope="col" class="text-center">Views</th>
+                            <th scope="col" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="videoListBody">
+                        <!-- Posts will be dynamically loaded here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- List Pagination -->
+            <nav aria-label="Post list pagination" class="mt-4">
+                <ul id="videoListPagination" class="pagination justify-content-center">
                     <!-- Pagination will be generated here -->
                 </ul>
             </nav>

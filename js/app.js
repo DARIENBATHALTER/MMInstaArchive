@@ -23,6 +23,9 @@ class ArchiveExplorer {
         this.videoGridComponent = null;
         this.commentListComponent = null;
         
+        // View mode
+        this.currentViewMode = 'grid';
+        
         this.initializeApp();
     }
 
@@ -464,9 +467,14 @@ class ArchiveExplorer {
             resultCount: 'resultCount',
             totalComments: 'totalComments',
             videoGridView: 'videoGridView',
+            videoListView: 'videoListView',
             videoDetailView: 'videoDetailView',
             videoGrid: 'videoGrid',
+            videoListBody: 'videoListBody',
             videoPagination: 'videoPagination',
+            videoListPagination: 'videoListPagination',
+            gridViewToggle: 'gridViewToggle',
+            listViewToggle: 'listViewToggle',
             videoTitle: 'videoTitle',
             videoDate: 'videoDate',
             videoViews: 'videoViews',
@@ -525,6 +533,23 @@ class ArchiveExplorer {
      */
     setupEventListeners() {
         try {
+            // View toggle listeners
+            if (this.elements.gridViewToggle) {
+                this.elements.gridViewToggle.addEventListener('change', () => {
+                    if (this.elements.gridViewToggle.checked) {
+                        this.switchToGridView();
+                    }
+                });
+            }
+            
+            if (this.elements.listViewToggle) {
+                this.elements.listViewToggle.addEventListener('change', () => {
+                    if (this.elements.listViewToggle.checked) {
+                        this.switchToListView();
+                    }
+                });
+            }
+            
             // Initialize VideoGridComponent
             if (this.elements.videoGrid) {
                 this.videoGridComponent = new VideoGridComponent(this.elements.videoGrid, this.dataManager);
@@ -639,6 +664,18 @@ class ArchiveExplorer {
                     this.showExportAllMenu(this.elements.exportAllVideos, 'all-videos');
                 });
             }
+            
+            // List view export buttons (delegated event listener)
+            document.addEventListener('click', (e) => {
+                if (e.target.matches('.export-post-btn') || e.target.closest('.export-post-btn')) {
+                    e.preventDefault();
+                    const button = e.target.closest('.export-post-btn');
+                    const videoId = button.dataset.videoId;
+                    if (videoId) {
+                        this.showExportAllMenu(button, 'single-video', videoId);
+                    }
+                }
+            });
 
             // Export progress close
             document.addEventListener('click', (e) => {
@@ -715,8 +752,15 @@ class ArchiveExplorer {
             };
             
             const result = await this.dataManager.getVideos(filters, this.currentPagination);
-            this.renderVideoGrid(result.videos);
-            this.renderPagination(result);
+            
+            if (this.currentViewMode === 'grid') {
+                this.renderVideoGrid(result.videos);
+                this.renderPagination(result);
+            } else {
+                this.renderVideoList(result.videos);
+                this.renderListPagination(result);
+            }
+            
             this.updateResultCount(result.total);
             
         } catch (error) {
@@ -737,6 +781,167 @@ class ArchiveExplorer {
             const html = videos.map(video => this.createVideoCard(video)).join('');
             this.elements.videoGrid.innerHTML = html;
         }
+    }
+
+    /**
+     * Switch to grid view
+     */
+    switchToGridView() {
+        this.currentViewMode = 'grid';
+        this.elements.videoGridView.style.display = 'block';
+        this.elements.videoListView.style.display = 'none';
+    }
+
+    /**
+     * Switch to list view
+     */
+    switchToListView() {
+        this.currentViewMode = 'list';
+        this.elements.videoGridView.style.display = 'none';
+        this.elements.videoListView.style.display = 'block';
+        this.loadVideoList();
+    }
+
+    /**
+     * Load and display video list
+     */
+    async loadVideoList() {
+        try {
+            const filters = {
+                ...this.currentFilters,
+                search: this.elements.searchInput.value
+            };
+            
+            const result = await this.dataManager.getVideos(filters, this.currentPagination);
+            this.renderVideoList(result.videos);
+            this.renderListPagination(result);
+            this.updateResultCount(result.total);
+            
+        } catch (error) {
+            console.error('❌ Failed to load video list:', error);
+            this.showError('Failed to load video list');
+        }
+    }
+
+    /**
+     * Render video list table
+     */
+    renderVideoList(videos) {
+        if (!this.elements.videoListBody) return;
+        
+        const html = videos.map(video => this.createVideoListRow(video)).join('');
+        this.elements.videoListBody.innerHTML = html;
+        
+        // Add click handlers for thumbnails and titles
+        this.elements.videoListBody.addEventListener('click', (e) => {
+            const videoId = e.target.closest('[data-video-id]')?.dataset.videoId;
+            if (videoId && (e.target.classList.contains('post-thumbnail') || e.target.classList.contains('post-title'))) {
+                this.showVideoDetail(videoId);
+            }
+        });
+    }
+
+    /**
+     * Create video list row HTML
+     */
+    createVideoListRow(video) {
+        const date = new Date(video.published_at).toLocaleDateString();
+        const likes = this.formatNumber(video.like_count || 0);
+        const comments = this.formatNumber(video.comment_count || 0);
+        const views = this.formatNumber(video.view_count || 0);
+        
+        // Get thumbnail from media files
+        let thumbnailSrc = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNGOEY5RkEiLz48dGV4dCB4PSIzMCIgeT0iMzAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuMzVlbSIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzZDNzU3RCI+TG9hZGluZy4uLjwvdGV4dD48L3N2Zz4=';
+        
+        if (video.media_files && video.media_files.length > 0) {
+            const firstMedia = video.media_files[0];
+            if (firstMedia.type === 'video' && firstMedia.thumbnail) {
+                thumbnailSrc = `instadata/posts/${firstMedia.thumbnail}`;
+            } else if (firstMedia.type === 'image') {
+                thumbnailSrc = `instadata/posts/${firstMedia.filename}`;
+            }
+        }
+        
+        return `
+            <tr data-video-id="${video.video_id}">
+                <td class="post-thumbnail-col">
+                    <img src="${thumbnailSrc}" 
+                         alt="${this.escapeHTML(video.title)}" 
+                         class="post-thumbnail"
+                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNFOUVDRUYiLz48dGV4dCB4PSIzMCIgeT0iMzAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuMzVlbSIgZm9udC1zaXplPSIxMCIgZmlsbD0iIzZDNzU3RCI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'">
+                </td>
+                <td class="post-title-col">
+                    <div class="post-title" title="${this.escapeHTML(video.title)}">
+                        ${this.escapeHTML(video.title)}
+                    </div>
+                </td>
+                <td class="text-center">
+                    <div class="post-date">${date}</div>
+                </td>
+                <td class="text-center">
+                    <div class="post-stats">${likes}</div>
+                </td>
+                <td class="text-center">
+                    <div class="post-stats">${comments}</div>
+                </td>
+                <td class="text-center">
+                    <div class="post-stats">${views}</div>
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-outline-primary btn-sm export-post-btn" data-video-id="${video.video_id}">
+                        <i class="bi bi-download"></i> Export
+                    </button>
+                </td>
+            </tr>
+        `;
+    }
+
+    /**
+     * Render list view pagination
+     */
+    renderListPagination(result) {
+        if (!this.elements.videoListPagination) return;
+        
+        let html = '';
+        const currentPage = result.page;
+        const totalPages = result.totalPages;
+        
+        // Previous button
+        if (result.hasPrev) {
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="${currentPage - 1}">Previous</a></li>`;
+        } else {
+            html += `<li class="page-item disabled"><span class="page-link">Previous</span></li>`;
+        }
+        
+        // Page numbers (simplified for list view)
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+        
+        for (let i = startPage; i <= endPage; i++) {
+            if (i === currentPage) {
+                html += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+            } else {
+                html += `<li class="page-item"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+            }
+        }
+        
+        // Next button
+        if (result.hasNext) {
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="${currentPage + 1}">Next</a></li>`;
+        } else {
+            html += `<li class="page-item disabled"><span class="page-link">Next</span></li>`;
+        }
+        
+        this.elements.videoListPagination.innerHTML = html;
+        
+        // Add click handlers
+        this.elements.videoListPagination.addEventListener('click', (e) => {
+            if (e.target.matches('[data-page]')) {
+                e.preventDefault();
+                this.currentPagination.page = parseInt(e.target.dataset.page);
+                this.loadVideoList();
+            }
+        });
     }
 
     /**
@@ -1547,14 +1752,19 @@ class ArchiveExplorer {
     /**
      * Export all video comments
      */
-    async exportVideoComments(format = 'comment-only') {
-        if (!this.currentVideo) return;
+    async exportVideoComments(format = 'comment-only', videoId = null) {
+        // Use provided videoId or fallback to current video
+        const targetVideoId = videoId || (this.currentVideo ? this.currentVideo.video_id : null);
+        if (!targetVideoId) {
+            this.showError('No video selected for export');
+            return;
+        }
         
         try {
             this.showExportProgress('single');
             
             await this.exportService.exportVideoComments(
-                this.currentVideo.video_id,
+                targetVideoId,
                 this.dataManager,
                 (progress) => {
                     this.updateExportProgress(progress, 'single');
@@ -1823,9 +2033,12 @@ class ArchiveExplorer {
     /**
      * Show export format menu for bulk export buttons
      */
-    showExportAllMenu(button, exportType) {
+    showExportAllMenu(button, exportType, videoId = null) {
         // Hide any existing menu
         this.hideExportAllMenu();
+        
+        // Store video ID for list view exports
+        this.currentExportVideoId = videoId;
 
         // Create menu
         const menu = document.createElement('div');
@@ -1891,13 +2104,19 @@ class ArchiveExplorer {
      * Handle export format selection for bulk exports
      */
     handleExportAllFormat(exportType, format) {
-        console.log(`Bulk export type: ${exportType}, format: ${format}`);
+        console.log(`Bulk export type: ${exportType}, format: ${format}, videoId: ${this.currentExportVideoId}`);
         
         // Store the selected format for use in the export process
         this.bulkExportFormat = format;
         
         if (exportType === 'single-video') {
-            this.exportVideoComments(format);
+            // Use stored video ID for list view exports, or current video for detail view
+            const videoId = this.currentExportVideoId || (this.currentVideo ? this.currentVideo.video_id : null);
+            if (videoId) {
+                this.exportVideoComments(format, videoId);
+            } else {
+                this.showError('No video selected for export');
+            }
         } else if (exportType === 'all-videos') {
             this.exportAllVideosComments(format);
         }
