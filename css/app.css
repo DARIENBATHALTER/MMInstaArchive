@@ -117,6 +117,36 @@
     background-color: #f8f9fa;
 }
 
+/* Sortable header styles */
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s ease;
+}
+
+.sortable-header:hover {
+    background-color: #e9ecef !important;
+}
+
+.sort-icon {
+    font-size: 12px;
+    margin-left: 4px;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+.sortable-header:hover .sort-icon {
+    opacity: 1;
+}
+
+.sortable-header.sort-asc .sort-icon::before {
+    content: "\f143"; /* bi-chevron-up */
+}
+
+.sortable-header.sort-desc .sort-icon::before {
+    content: "\f140"; /* bi-chevron-down */
+}
+
 /* Responsive adjustments for list view */
 @media (max-width: 768px) {
     #videoListTable .post-title-col {
@@ -372,7 +402,7 @@ body {
 }
 
 .navbar-brand {
-    font-size: 1.3rem;
+    font-size: 1.5rem;
     font-weight: 600;
     color: white !important;
     text-decoration: none;
@@ -381,7 +411,10 @@ body {
 }
 
 .navbar-brand:hover {
-    color: var(--medical-gold) !important;
+    background: var(--instagram-gradient) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
 }
 
 .navbar-brand i {

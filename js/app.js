@@ -26,6 +26,9 @@ class ArchiveExplorer {
         // View mode
         this.currentViewMode = 'grid';
         
+        // List view sorting state
+        this.currentListSort = { field: 'date', direction: 'desc' };
+        
         this.initializeApp();
     }
 
@@ -728,6 +731,16 @@ class ArchiveExplorer {
                     this.switchInsightTab(e.target.dataset.tab);
                 }
             });
+
+            // List view sortable headers
+            document.addEventListener('click', (e) => {
+                if (e.target.matches('.sortable-header') || e.target.closest('.sortable-header')) {
+                    e.preventDefault();
+                    const header = e.target.closest('.sortable-header');
+                    const sortField = header.dataset.sort;
+                    this.handleListSort(sortField);
+                }
+            });
             
             console.log('✅ Event listeners set up successfully');
             
@@ -824,6 +837,7 @@ class ArchiveExplorer {
         this.currentViewMode = 'list';
         this.elements.videoGridView.style.display = 'none';
         this.elements.videoListView.style.display = 'block';
+        this.updateSortHeaders(); // Initialize sort header indicators
         this.loadVideoList();
     }
 
@@ -838,7 +852,11 @@ class ArchiveExplorer {
             };
             
             const result = await this.dataManager.getVideos(filters, this.currentPagination);
-            this.renderVideoList(result.videos);
+            
+            // Apply custom list sorting
+            const sortedVideos = this.sortVideosByListCriteria(result.videos);
+            
+            this.renderVideoList(sortedVideos);
             this.renderListPagination(result);
             this.updateResultCount(result.total);
             
@@ -846,6 +864,44 @@ class ArchiveExplorer {
             console.error('❌ Failed to load video list:', error);
             this.showError('Failed to load video list');
         }
+    }
+
+    /**
+     * Sort videos based on list view criteria
+     */
+    sortVideosByListCriteria(videos) {
+        const { field, direction } = this.currentListSort;
+        
+        return [...videos].sort((a, b) => {
+            let valueA, valueB;
+            
+            switch (field) {
+                case 'date':
+                    valueA = new Date(a.published_at).getTime();
+                    valueB = new Date(b.published_at).getTime();
+                    break;
+                case 'likes':
+                    valueA = a.like_count || 0;
+                    valueB = b.like_count || 0;
+                    break;
+                case 'comments':
+                    valueA = a.comment_count || 0;
+                    valueB = b.comment_count || 0;
+                    break;
+                case 'views':
+                    valueA = a.view_count || 0;
+                    valueB = b.view_count || 0;
+                    break;
+                default:
+                    return 0;
+            }
+            
+            if (direction === 'asc') {
+                return valueA > valueB ? 1 : valueA < valueB ? -1 : 0;
+            } else {
+                return valueA < valueB ? 1 : valueA > valueB ? -1 : 0;
+            }
+        });
     }
 
     /**
@@ -1938,6 +1994,38 @@ class ArchiveExplorer {
         await this.loadVideoGrid();
     }
 
+    /**
+     * Handle list view sorting
+     */
+    handleListSort(field) {
+        // Toggle direction if clicking the same field
+        if (this.currentListSort.field === field) {
+            this.currentListSort.direction = this.currentListSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            // New field - default to descending for most fields, ascending for date
+            this.currentListSort.field = field;
+            this.currentListSort.direction = field === 'date' ? 'desc' : 'desc';
+        }
+
+        // Update header visual indicators
+        this.updateSortHeaders();
+
+        // Re-load the list view with new sorting
+        this.loadVideoList();
+    }
+
+    /**
+     * Update sort header visual indicators
+     */
+    updateSortHeaders() {
+        const headers = document.querySelectorAll('.sortable-header');
+        headers.forEach(header => {
+            header.classList.remove('sort-asc', 'sort-desc');
+            if (header.dataset.sort === this.currentListSort.field) {
+                header.classList.add(`sort-${this.currentListSort.direction}`);
+            }
+        });
+    }
 
     /**
      * Update stats display
